@@ -1,0 +1,176 @@
+<grid-column>
+  <div class="grid-column-content" onclick={ (e) => onEdit(e) }>
+    <div if={ props.column.type === 'id' } class="text-overflow">
+      { props.item.get('_id') }
+    </div>
+    <div if={ props.column.type !== 'id' } is={ `dashup-grid-field-${props.column.field.type}` } field={ props.column.field } value={ props.item ? props.item.get(props.column.field.name || props.column.field.uuid) : null } />
+  </div>
+  <div if={ state.popped && props.column.type !== 'id' } class="dropdown-menu card show p-0">
+    <div class={ classes({ 'card-body p-2' : true, 'd-flex flex-row' : !blocks.includes(props.column.field.type) }) }>
+      <div is={ `field-${props.column.field.type}` } field={ props.column.field } ref={ ref('field') } type={ 'grid' } class="field-column flex-1" data-value={ getValue() } get-id={ () => 'grid' } get-name={ () => 'grid' } preview={ true } />
+      
+      <button class={ classes({ 'btn btn-success' : true, 'ml-2' : !blocks.includes(props.column.field.type), 'mt-2' : blocks.includes(props.column.field.type), 'disabled' : loading() }) } onclick={ (e) => onChange(e) }>
+        { loading('submit') ? 'Loading...' : 'Submit' }
+      </button>
+    </div>
+  </div>
+
+  <script>
+
+    // export default
+    export default class GridColumn {
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // RIOT METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // blocks
+        this.blocks = ['image', 'code', 'file', 'address', 'wysiwyg', 'textarea'];
+
+        // bind methods
+        this.getValue = this.getValue.bind(this);
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // EVENT METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * on change
+       */
+      async onChange(e) {
+        // prevent default
+        e.preventDefault();
+        e.stopPropagation();
+
+        // check item
+        if (!this.props.item) return;
+
+        // check can
+        if (!this.props.dashup.can(this.props.page, 'submit')) return;
+
+        // loading
+        this.loading('submit', true);
+
+        // set value
+        const val = (this.refs.field.val ? this.refs.field.val() : null) || $('select, input, textarea', this.$('.card-body')).val();
+
+        // set value
+        this.props.item.set(this.props.column.name || this.props.column.uuid, val);
+        await this.props.item.save();
+
+        // loading
+        this.loading('submit', false);
+
+        // mouse up
+        if (this.closePopped) this.closePopped();
+      }
+
+      /**
+       * on edit
+       */
+      onEdit(e) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // check can
+        if (!this.props.dashup.can(this.props.page, 'submit')) return;
+
+        // mouse up
+        if (this.closePopped) this.closePopped();
+
+        // submit form
+        this.update({
+          popped : true,
+        });
+
+        // container
+        const container = $(this.$(`.dropdown-menu`));
+
+        // create close popped
+        const closePopped = (e) => {
+          // check
+          if (!e || (!container.is(e.target) && container.has(e.target).length === 0)) {
+            // close
+            this.update({
+              popped : false
+            });
+
+            // remove listener
+            $(document).off('mouseup', closePopped);
+          }
+        };
+        this.closePopped = closePopped;
+
+        // add listener
+        $(document).on('mouseup', closePopped);
+      }
+
+      /**
+      * get data
+      *
+      * @return {*}
+      */
+      getValue() {
+        // return object assign
+        return this.props.item ? this.props.item.get(this.props.column.name || this.props.column.uuid) : null;
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * classes
+       */
+      classes(obj) {
+        // return object
+        return Object.keys(obj).filter((k) => obj[k]).join(' ');
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
+    }
+  </script>
+</grid-column>

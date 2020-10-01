@@ -45,6 +45,8 @@ export default class GridPage extends Struct {
   get views() {
     // return object of views
     return {
+      grid   : 'grid',
+      
       view   : 'page/grid/view',
       menu   : 'page/grid/menu',
       config : 'page/grid/config',

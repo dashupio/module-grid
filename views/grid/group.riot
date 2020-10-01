@@ -1,0 +1,1105 @@
+<grid-group>
+  <div class={ classes({ 'dashup-grid-group' : true, 'mb-5' : props.group && props.group.value, 'd-none' : !state.items || !state.items.length }) }>
+
+    <!-- GROUP LABEL -->
+    <div class="group-title" if={ props.group && props.group.label }>
+      { props.group.label }
+    </div>
+    <!-- / GROUP LABEL -->
+
+    <!-- GRID -->
+    <div class="grid-main">
+      <div class="grid-scroll">
+
+        <!-- GRID HEADER -->
+        <div class="grid-header" if={ !loading('columns') }>
+
+          <div class="grid-column grid-column-add">
+            <div class="column-inner">
+            </div>
+          </div>
+
+          <!-- ACTUAL COLUMNS -->
+          <div class="grid-column-scroll">
+            <div each={ (column, i) in getColumns() } class={ classes({ 'grid-column grid-column-header' : true, 'active' : column.id === state.renaming }) } data-column={ i } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
+              <div class="column-inner">
+                <div class="column-body">
+                  <div if={ column.id !== state.renaming } class={ classes({ 'column-body-inner' : true, 'moves' : props.dashup.can(props.page, 'alter') }) }>
+                    { column.title }
+                  </div>
+                  <input if={ column.id === state.renaming } class="column-body-inner" value={ column.title } onkeyup={ (e) => onKeyupRenameColumn(e, column) } />
+                </div>
+                <button class={ classes({ 'btn btn-sm btn-light column-btn ml-2 mr-0' : true, 'active' : props.page.get('data.sort.id') === column.id }) } onclick={ (e) => onSort(e, column) }>
+                  <i class="fa fa-arrows-v" if={ props.page.get('data.sort.id') !== column.id } />
+                  <i class="fa fa-arrow-up" if={ props.page.get('data.sort.way') === -1 && props.page.get('data.sort.id') === column.id } />
+                  <i class="fa fa-arrow-down" if={ props.page.get('data.sort.way') === 1 && props.page.get('data.sort.id') === column.id } />
+                </button>
+
+                <div class="btn-group dropdown ml-0 mr-0" if={ column.id === state.renaming }>
+                  <button class="btn btn-sm btn-light column-btn" onclick={ (e) => onCompleteRenameColumn(e, column) }>
+                    <i class="fa fa-check" />
+                  </button>
+                  <button class="btn btn-sm btn-light column-btn" onclick={ (e) => onRenameColumn(e, null) }>
+                    <i class="fa fa-times" />
+                  </button>
+                </div>
+                <div if={ props.dashup.can(props.page, 'alter') } class="btn-group dropdown ml-0 mr-0" if={ column.id !== state.renaming }>
+                  <button class="btn btn-sm btn-light column-btn dropdown-toggle" type="button" id={ `grid-column-${i}` } data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa fa-cog" />
+                  </button>
+
+                  <div class="dropdown-menu dropdown-menu-right" aria-labelledby={ `grid-column-${i}` }>
+                    <a class="dropdown-item" href="#!" onclick={ (e) => onRenameColumn(e, column) }>Rename Column</a>
+                    <a class="dropdown-item" href="#!" onclick={ (e) => onRemoveColumn(e, column) }>Remove Column</a>
+                  </div>
+                </div>
+
+                <div class="column-resize" if={ props.dashup.can(props.page, 'alter') } />
+              </div>
+            </div>
+          </div>
+          <!-- / ACTUAL COLUMNS -->
+
+          <!-- ADD COLUMN -->
+          <div class="grid-column grid-column-add">
+            <div class="column-inner">
+              <div class="column-body" if={ !props.dashup.can(props.page, 'alter') }>
+                <button class="btn btn-sm btn-outline-secondary" type="button">
+                  <i class="fa fa-columns" />
+                </button>
+              </div>
+              <div class="column-body dropdown" if={ props.dashup.can(props.page, 'alter') }>
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="grid-column-add" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="fa fa-columns" />
+                </button>
+                <div class="dropdown-menu dropdown-menu-right p-0" aria-labelledby="grid-column-add">
+                  <div class="card p-2">
+                    <nav class="nav flex-column">
+                      <a href="#!" class="nav-link disabled">
+                        <b>Add Column</b>
+                      </a>
+                      <a each={ (column, i) in props.fields } href="#!" class="nav-link" onclick={ (e) => onAddColumn(e, column) }>
+                        { column.label || column.name }
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- / ADD COLUMN -->
+
+        </div>
+        <!-- / GRID HEADER -->
+
+        <!-- GRID BODY -->
+        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } { ...props } />
+        <!-- / GRID BODY -->
+      </div>
+
+      <!-- BULK ACTION -->
+      <div if={ props.dashup.can(props.page, 'submit') && state.selected && state.selected.length } class="grid-footer">
+        <div class="grid-column grid-column-add">
+          <div class="column-inner align-items-center justify-content-center">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="selected" checked onclick={ (e) => onClearSelect(e) } />
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-column-scroll">
+          <div class="grid-column flex-1">
+            <div class="grid-field">
+              <div class="field-inner">
+                <div class="grid-column-content">
+                  { state.selected.length.toLocaleString() } Items Selected
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-column grid-column-edit">
+          <div class="column-inner align-items-center justify-content-center">
+            <div class="column-body">
+              <button class="btn btn-sm btn-outline-danger" onclick={ (e) => onRemoveItems(e) }>
+                <i class="fa fa-trash" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- / BULK ACTION -->
+
+      <!-- PAGINATION -->
+      <div class="px-2 pt-3 mb-5" if={ !props.page.get('data.group.uuid') }>
+        <div class="row">
+          <div class="col-sm-6 d-flex align-items-center">
+            <small class="pagination-stats text-muted w-100">
+              Showing { (state.page - 1) * getLimit() } - { (state.page * getLimit()) > state.count ? state.count : (state.page * getLimit()) } of { state.count }
+            </small>
+          </div>
+          <div class="col-sm-6 d-flex align-items-center">
+            <div class="w-100">
+              <div class="btn-group float-sm-right">
+                <button class={ classes({ 'btn btn-sm btn-outline-primary' : true, 'disabled' : !hasPrev() }) } aria-label="First" onclick={ (e) => onFirst(e) }>
+                  <i class="fa fa-chevron-double-left" />
+                </button>
+                <button class={ classes({ 'btn btn-sm btn-outline-primary' : true, 'disabled' : !hasPrev() }) } aria-label="Previous" onclick={ (e) => onPrev(e) }>
+                  <i class="fa fa-chevron-left" />
+                </button>
+                <button each={ (p, i) in getPages() } class={ classes({ 'btn btn-sm btn-outline-primary' : true, 'active' : state.page === p }) } data-page={ p } onclick={ (e) => onPage(e, p) }>
+                  { p }
+                </button>
+                <button class={ classes({ 'btn btn-sm btn-outline-primary' : true, 'disabled' : !hasNext() }) } aria-label="Next" onclick={ (e) => onNext(e) }>
+                  <i class="fa fa-chevron-right" />
+                </button>
+                <button class={ classes({ 'btn btn-sm btn-outline-primary' : true, 'disabled' : !hasNext() }) } aria-label="Last" onclick={ (e) => onLast(e) }>
+                  <i class="fa fa-chevron-double-right" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- / PAGINATION -->
+
+    </div>
+    <!-- / GRID -->
+
+
+
+    <div if={ state.removing } class="modal fade" id="column-remove">
+      <div class="modal-dialog">
+        <div class="modal-content">
+
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h5 class="modal-title">
+              Removing <b>{ state.removing.title }</b>
+            </h5>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+
+          <!-- Modal body -->
+          <div class="modal-body">
+            Are you sure you want to remove this item?
+          </div>
+
+          <!-- Modal footer -->
+          <div class="modal-footer">
+            <button type="button" class="btn btn-info mr-auto" data-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class="btn btn-danger" onclick={ (e) => onCompleteRemoveColumn(e, state.removing) }>
+              Confirm
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div if={ state.selected && state.selected.length } class="modal fade" id="selected-remove">
+      <div class="modal-dialog">
+        <div class="modal-content">
+
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h5 class="modal-title">
+              Removing <b>{ state.selected.length.toLocaleString() } items</b>
+            </h5>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+
+          <!-- Modal body -->
+          <div class="modal-body">
+            Are you sure you want to remove these items?
+          </div>
+
+          <!-- Modal footer -->
+          <div class="modal-footer">
+            <button type="button" class="btn btn-info mr-auto" data-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class={ classes({ 'btn btn-danger' : true, 'disabled' : loading('item.remove') }) } disabled={ loading('item.remove') } onclick={ (e) => onCompleteRemoveItems(e, state.selected) }>
+              { loading('item.remove') ? 'Loading...' : 'Confirm' }
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // require base class
+    import { v4 as uuid } from 'uuid';
+    import PerfectScrollbar from 'perfect-scrollbar';
+
+    // grid body
+    import gridBody from './body';
+
+    // export default
+    export default class GridGroup {
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // RIOT METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * static get components
+       */
+      static get components() {
+        // return grid
+        return {
+          gridBody,
+        };
+      }
+
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // bind
+        this.init = this.init.bind(this);
+
+        // bind
+        this.beginResize = this.beginResize.bind(this);
+
+        // page/count
+        this.state.page = 1;
+        this.state.count = 0;
+
+        // listeners
+        this.props.page.on('do.sort', this.init);
+        this.props.page.on('do.page', this.init);
+        this.props.page.on('do.limit', this.init);
+        this.props.page.on('do.user.where', this.init);
+        this.props.page.on('do.data.filter', this.init);
+        
+        // min and max widths
+        this.minW = 5;
+
+        // init basis
+        this.initBasis();
+      }
+
+      /**
+       * on mounted
+       */
+      async onMounted(...args) {
+        // init
+        await this.init();
+
+        // other inits
+        this.initSize();
+        this.initSort();
+        this.initResize();
+      }
+
+      /**
+       * on before mount
+       */
+      onBeforeUnmount(...args) {
+        // listeners
+        this.props.page.removeListener('do.sort', this.init);
+        this.props.page.removeListener('do.page', this.init);
+        this.props.page.removeListener('do.limit', this.init);
+        this.props.page.removeListener('do.user.where', this.init);
+        this.props.page.removeListener('do.data.filter', this.init);
+      }
+
+      /**
+       * on mounted
+       */
+      onUpdated(...args) {
+        // init
+        this.initSize();
+        this.initSort();
+        this.initResize();
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // EVENT METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * on select item
+       */
+      onSelect(item, way) {
+        // check item
+        let selected = this.state.selected || [];
+
+        // selected item
+        if (!way) {
+          selected = selected.filter((s) => s.get('_id') !== item.get('_id'));
+        } else if (!selected.find((s) => s.get('_id') === item.get('_id'))) {
+          selected.push(item);
+        }
+
+        // selected update
+        this.update({
+          selected,
+        });
+      }
+
+      /**
+       * clear selection
+       */
+      onClearSelect(e) {
+        // prevent
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
+        this.update({
+          selected : [],
+        });
+        $('.form-check-input:checked', this.root).prop('checked', false);
+      }
+
+      /**
+       * on rename column
+       */
+      onRemoveItems(e) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // show modal
+        $(this.$('#selected-remove')).modal('show');
+      }
+
+      /**
+       * on complete remove items
+       */
+      async onCompleteRemoveItems(e, items) {
+        // loading
+        this.loading('item.remove', true);
+
+        // loop items
+        await Promise.all(items.map((item) => item.remove()));
+        
+        // show modal
+        $(this.$('#selected-remove')).modal('hide');
+
+        // update grid
+        this.props.page.emit('do.page');
+
+        // remove selected
+        this.onClearSelect();
+
+        // loading
+        this.loading('item.remove', false);
+      }
+
+      /**
+       * on sort
+       */
+      async onSort(e, column) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+
+        // check sort
+        let sort = this.props.page.get('data.sort') || {};
+
+        // set sort
+        if (sort.id !== column.id) {
+          sort.id  = column.id;
+          sort.way = -1;
+        } else if (sort.id === column.id) {
+          if (sort.way === -1) {
+            sort.way = 1;
+          } else {
+            sort = null;
+          }
+        }
+        
+        // set model
+        await this.props.onData('sort', sort);
+        this.props.page.emit('do.sort');
+      }
+
+      /**
+       * on add column
+       */
+      async onAddColumn(e, column) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        const columns = this.props.page.get('data.columns') || [];
+
+        // push column
+        columns.push(Object.assign({}, column, {
+          id    : uuid(),
+          order : columns.length + 1
+        }));
+        this.initBasis(columns);
+        
+        // set model
+        await this.props.onData('columns', columns);
+      }
+
+      /**
+       * on rename column
+       */
+      onRenameColumn(e, column) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // set page
+        this.update({
+          renaming : column ? column.id : null,
+        });
+
+        // timeout
+        setTimeout(() => {
+          // focus
+          if ($('.grid-header input')) $('.grid-header input').focus();
+        }, 10);
+      }
+
+      /**
+       * on enter pressed
+       */
+      onKeyupRenameColumn(e, column) {
+        // check which
+        if (e.which !== 13) return true;
+        
+        // rename
+        return this.onCompleteRenameColumn(e, column);
+      }
+      
+      /**
+       * on complete remove column
+       */
+      onCompleteRenameColumn(e, column) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // set value
+        column.title = $('.grid-header input').val();
+
+        // remove
+        this.update({
+          renaming : null,
+        });
+
+        // on data
+        this.props.onData('columns', this.props.page.get('data.columns') || []);
+      }
+
+      /**
+       * on remove column
+       */
+      onRemoveColumn(e, column) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // close
+        if (this.closePopped) this.closePopped();
+
+        // set page
+        this.update({
+          removing : column,
+        });
+
+        // show modal
+        $(this.$('#column-remove')).modal('show');
+      }
+      
+      /**
+       * on complete remove column
+       */
+      onCompleteRemoveColumn(e, column) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // remove
+        $(this.$('#column-remove')).modal('hide');
+        this.update({
+          removing : null,
+        });
+
+        // get page
+        const columns = (this.props.page.get('data.columns') || []).filter((col) => {
+          // check column
+          return col.id !== column.id;
+        });
+        this.initBasis(columns);
+
+        // on data
+        this.props.onData('columns', columns);
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // PAGINATION METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * on pagination click function
+       *
+       * @param  {Event} e
+       */
+      onPage(e, page) {
+        // prevent scrolling to top
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        this.state.page = page;
+        this.props.page.emit('do.page');
+      }
+
+      /**
+       * on next click function
+       */
+      onLast(e) {
+        // prevent scrolling to top
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        this.state.page = Math.floor(this.state.count / this.getLimit()) + 1;
+        this.props.page.emit('do.page');
+      }
+
+      /**
+       * on previous click function
+       */
+      onFirst(e) {
+        // prevent scrolling to top
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        this.state.page = 1;
+        this.props.page.emit('do.page');
+      }
+
+      /**
+       * on next click function
+       */
+      onNext(e) {
+        // prevent scrolling to top
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        this.state.page = this.hasNext() ? (this.state.page + 1) : this.state.page;
+        this.props.page.emit('do.page');
+      }
+
+      /**
+       * on previous click function
+       */
+      onPrev(e) {
+        // prevent scrolling to top
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        this.state.page = this.hasPrev() ? (this.state.page - 1) : 1;
+        this.props.page.emit('do.page');
+      }
+
+      /**
+       * get limit
+       */
+      getLimit () {
+        // return limit
+        return this.props.page.get('data.limit') || 20;
+      }
+
+      /**
+       * get pages
+       */
+      getPages () {
+        // reset pages
+        const pages = [];
+
+        // set start
+        let page = (this.state.page - 5) < 1 ? 1 : (this.state.page - 5);
+        let start = ((page - 1) * this.getLimit());
+        const main = page;
+
+        // while start less than pages
+        while (start < this.state.count) {
+          // add to pages
+          pages.push(page);
+
+          // add to page
+          page += 1;
+
+          // set start value
+          start = ((page - 1) * this.getLimit());
+
+          // check if should stop
+          if (main - page > 8 || pages.length > 9) {
+            break;
+          }
+        }
+
+        // return pages
+        return pages;
+      }
+
+      /**
+       * Return has previous page
+       *
+       * @return {boolean}
+       */
+      hasPrev() {
+        // return page greater
+        return this.state.page > 1;
+      }
+
+      /**
+       * Return has next page
+       *
+       * @return {boolean}
+       */
+      hasNext() {
+        // return page less
+        return this.state.page < (Math.floor(this.state.count / this.getLimit()) + 1);
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // Get Methods
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * get columns
+       */
+      getColumns () {
+        // return
+        return (this.props.page.get('data.columns') || []).sort((a, b) => {
+          // a or b
+          const aC = a.order || 0;
+          const bC = b.order || 0;
+
+          // check order
+          if (bC > aC) return -1;
+          if (bC < aC) return 1;
+          return 0;
+        });
+      }
+
+      /**
+       * get forms
+       */
+      getForms () {
+        // return forms
+        return (this.props.page.get('data.forms') || [this.props.page.get('data.form'), this.props.page.get('data.order.form')]).filter((f) => f);
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // Init Methods
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+      
+      /**
+       * init
+       */
+      async init () {
+        // get model
+        let items = [];
+        let count = null;
+
+        // get model
+        const model = this.props.model;
+
+        // loading
+        this.loading('grid', true);
+
+        // query by
+        if (model) {
+          // set query
+          let query = this.props.dashup.page(model);
+          let countQ = this.props.dashup.page(model);
+
+          // forms
+          const forms = this.getForms();
+
+          // check items
+          if (forms.length) {
+            // loop forms
+            query = query.in('_meta.form', forms);
+            countQ = countQ.in('_meta.form', forms);
+          }
+
+          // load filter
+          let filter = null;
+
+          // try/catch
+          try {
+            filter = JSON.parse(this.props.page.get('data.filter'));
+          } catch (e) {}
+
+          // add initial where
+          if (filter) {
+            // add wheres
+            filter.forEach((where) => {
+              // where
+              query = query.where(where);
+              countQ = countQ.where(where);
+            });
+          }
+
+          // check group
+          if (this.props.group && this.props.group.key) {
+            // where
+            query = query.where({
+              [this.props.group.key] : this.props.group.value,
+            });
+            countQ = countQ.where({
+              [this.props.group.key] : this.props.group.value,
+            });
+          }
+
+          // user query
+          (this.props.page.get('user.where') || []).forEach((where) => {
+            // add query
+            query = query[where[0]](where[1], where[2]);
+            countQ = countQ[where[0]](where[1], where[2]);
+          });
+
+          // check sort
+          if (this.props.page.get('data.sort.id')) {
+            // set sort
+            const sortColumn = (this.props.page.get('data.columns') || []).find((c) => c.id === this.props.page.get('data.sort.id'));
+
+            // sort by that
+            if (sortColumn) query = query.sort(sortColumn.field.name || sortColumn.field.uuid, this.props.page.get('data.sort.way'));
+          }
+
+          // limit
+          if (!this.props.group || !this.props.group.key) {
+            query.skip(((this.state.page || 1) - 1) * this.getLimit());
+            query.limit(this.getLimit());
+          }
+
+          // listen
+          items = await query.listen();
+          count = await countQ.count();
+        }
+
+        // update
+        this.update({
+          items,
+          count
+        });
+
+        // loading
+        this.loading('grid', false);
+      }
+
+      /**
+       * init size
+       */
+      initSize () {
+        // min size
+        const minSize = (this.getColumns().length * 10);
+
+        // init size
+        $(this.$$('.grid-header, .grid-body')).css('min-width', `${minSize}rem`);
+      }
+
+      /**
+       * init sort
+       */
+      initSort () {
+        // require sort
+        const Sortable = require('sortablejs');
+
+        // sortables
+        if (this.sortables) {
+          // destroy
+          try {
+            // remove
+            this.sortables.forEach((sortable) => sortable.destroy());
+          } catch (e) {}
+        }
+
+        // sortables
+        this.sortables = [];
+
+        // check init
+        if (!this.$$('.grid-header').length) return;
+
+        // create sortables
+        this.$$('.grid-header .grid-column-scroll').forEach((item) => {
+          // push
+          this.sortables.push(new Sortable(item, {
+            group          : 'grid-group',
+            handle         : '.column-body-inner.moves',
+            animation      : 200,
+            fallbackOnBody : true,
+
+            onEnd : async (e) => {
+              // columns
+              const columns = this.props.page.get('data.columns') || [];
+
+              // update columns
+              this.$$('.grid-header .grid-column-scroll > .grid-column').forEach((item, i) => {
+                // column
+                if (!item.getAttribute('data-column')) return;
+
+                // get col
+                const col = columns[item.getAttribute('data-column') || 0];
+
+                // col
+                col.order = i;
+              });
+
+              // loading columns
+              this.loading('columns', true);
+              this.props.onData('columns', columns);
+
+              // timeout
+              setTimeout(() => {
+                // loading columns
+                this.loading('columns', false);
+              }, 10);
+            }
+          }));
+        });
+      }
+
+      /**
+       * init resize
+       */
+      initBasis(columns) {
+        // set columns
+        if (!columns) columns = this.props.page.get('data.columns') || [];
+
+        // min width
+        const maxW = 100 - (((this.props.page.get('data.columns') || []).length - 1) * this.minW);
+
+        // check columns
+        columns.forEach((col) => {
+          // set basis
+          if (!col.basis) col.basis = parseFloat((100 / columns.length).toFixed(2));
+          if (col.basis < this.minW) col.basis = this.minW;
+        });
+
+        // total basis
+        const totalBasis = columns.reduce((accum, col) => {
+          return accum + col.basis;
+        }, 0);
+
+        // fit into basis properly
+        if (totalBasis !== 100) {
+          // check columns
+          columns.forEach((col) => {
+            // set basis
+            col.basis = parseFloat(((col.basis / totalBasis) * 100).toFixed(2));
+          });
+        }
+
+      }
+
+      /**
+       * init resize
+       */
+      initResize() {
+        // add resize
+        $(document).off('mousedown', this.beginResize);
+        $(document).on('mousedown', this.beginResize);
+
+        // fix column sizing
+
+      }
+
+      /**
+       * begin resize
+       */
+      beginResize(e) {
+        // check
+        if (!$(e.target).is($(this.$$('.column-resize')))) return;
+
+        // moving
+        $(e.target).closest('[data-column]').addClass('column-moving');
+
+        // get attribute
+        const i    = parseInt($(e.target).closest('[data-column]').attr('data-column'));
+        const col  = this.props.page.get(`data.columns.${i}`);
+        const maxW = 100 - (((this.props.page.get('data.columns') || []).length - 1) * this.minW);
+
+        // return
+        if (!col) return;
+
+        // original values
+        const origX = e.pageX;
+        const origB = col.basis;
+
+        // set chage
+        let change = 0;
+        
+        // mousemove
+        const mousemove = (e) => {
+          // update basis
+          const newX = e.pageX;
+
+          // width
+          const width = $(this.$('.grid-header')).width();
+
+          // update change
+          const changeX = origX - newX;
+
+          // check width
+          if (!width || !changeX) return;
+
+          // check width of change
+          change = (parseFloat(((changeX / width) * 100).toFixed(2)) || 0) * -1;
+
+          // no change
+          if (i === ((this.props.page.get('data.columns') || []).length - 1) && change < 0) change = 0;
+
+          // create new basis
+          let newB = parseFloat((origB + change > maxW ? maxW : origB + change).toFixed(2));
+          if (newB < this.minW) newB = this.minW;
+
+          // current remove
+          let currentR = newB - origB;
+          let currentI = i + 1;
+          let currentP = this.props.page.get(`data.columns.${currentI}`);
+
+          // remove max evenly from next column in order
+          while (currentP && currentR != 0) {
+            // remove from next basis
+            let nextB = (currentP.basis - currentR) > maxW ? maxW : (currentP.basis - currentR);
+            if (nextB < this.minW) nextB = this.minW;
+
+            // set css on other columns
+            $(`[data-column="${currentI}"]`).css({
+              'max-width'  : `${nextB}%`,
+              'flex-basis' : `${nextB}%`
+            });
+
+            // remove from current R
+            currentR = currentR - (currentP.basis - nextB);
+            currentI = currentI + 1;
+            currentP = this.props.page.get(`data.columns.${currentI}`);
+          }
+
+          // update basis
+          $(`[data-column="${i}"]`).css({
+            'max-width'  : `${newB - currentR}%`,
+            'flex-basis' : `${newB - currentR}%`,
+          });
+        };
+
+        // mousemove
+        $(document).on('mousemove', mousemove);
+        $(document).one('mouseup', (e) => {
+          // off
+          $(document).off('mousemove', mousemove);
+
+          // create new basis
+          let newB = parseFloat((origB + change > maxW ? maxW : origB + change).toFixed(2));
+          if (newB < this.minW) newB = this.minW;
+
+          // current remove
+          let currentR = newB - origB;
+          let currentI = i + 1;
+          let currentP = this.props.page.get(`data.columns.${currentI}`);
+
+          // remove max evenly from next column in order
+          while (currentP && currentR != 0) {
+            // remove from next basis
+            let nextB = (currentP.basis - currentR) > maxW ? maxW : (currentP.basis - currentR);
+            if (nextB < this.minW) nextB = this.minW;
+
+            // remove from current R
+            currentR = currentR - (currentP.basis - nextB);
+
+            // set basis
+            currentP.basis = nextB;
+
+            // next
+            currentI = currentI + 1;
+            currentP = this.props.page.get(`data.columns.${currentI}`);
+          }
+
+          // set full new basis
+          col.basis = newB - currentR;
+
+          // update
+          this.props.onData('columns', this.props.page.get('data.columns'));
+
+          // moving
+          $('.column-moving').removeClass('column-moving');
+        });
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * classes
+       */
+      classes(obj) {
+        // return object
+        return Object.keys(obj).filter((k) => obj[k]).join(' ');
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
+    }
+
+  </script>
+</grid-group>

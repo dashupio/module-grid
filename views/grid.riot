@@ -1,0 +1,26 @@
+<grid>
+  <div>
+    <grid-group if={ props.groups } each={ (group, i) in props.groups } group={ group } { ...props } />
+    <grid-group if={ !props.groups } { ...props } />
+  </div>
+
+  <script>
+
+    // import sub views
+    import gridGroup from './grid/group';
+
+    // export dashup grid
+    export default class Grid {
+      /**
+       * static get components
+       */
+      static get components() {
+        // return grid
+        return {
+          gridGroup,
+        };
+      }
+
+    }
+  </script>
+</grid>

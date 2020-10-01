@@ -9,7 +9,7 @@
       <i class="fa fa-spin fa-spinner h1" />
     </div>
     <div if={ !loading('grid') && props.page.get('data.model') && props.page.get('data.forms.0') } class="dashup-grid">
-      <dashup-grid model={ props.page.get('data.model') } groups={ getGroups() } fields={ getFields() } { ...getProps() } />
+      <dashup-view view="grid" type="page" model={ props.page.get('data.model') } groups={ getGroups() } fields={ getFields() } { ...getProps() } />
     </div>
   </div>
 
@@ -103,7 +103,10 @@
         const newProps = { ...(this.props) };
 
         // delete
+        delete newProps.type;
+        delete newProps.view;
         delete newProps.class;
+        delete newProps.struct;
 
         // return
         return newProps;
