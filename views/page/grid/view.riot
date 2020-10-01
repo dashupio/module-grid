@@ -1,0 +1,143 @@
+<page-grid-view>
+  <div>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.forms.0') } onclick={ (e) => props.onConfig(e) }>
+      <i class="fa fa-exclamation-triangle mr-2" />
+      Please select at least one <b>form</b> for the grid.
+    </a>
+
+    <div if={ loading('grid') } class="text-center my-5 py-5">
+      <i class="fa fa-spin fa-spinner h1" />
+    </div>
+    <div if={ !loading('grid') && props.page.get('data.forms.0') } class="dashup-grid">
+      <dashup-grid model={ props.page.get('data.model') } groups={ getGroups() } fields={ getFields() } { ...getProps() } />
+    </div>
+  </div>
+
+  <script>
+    // export default
+    export default class PageGridView {
+
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // check frontend
+        if (typeof window === 'undefined') return;
+
+        // safe update
+        this.safeUpdate = () => {
+          this.update();
+        };
+
+        // listeners
+        this.props.page.on('reload', this.safeUpdate);
+        this.props.page.on('data.forms', this.safeUpdate);
+      }
+
+      /**
+       * on before mount
+       */
+      onBeforeUnmount(...args) {
+        // check frontend
+        if (typeof window === 'undefined') return;
+
+        // listeners
+        this.props.page.removeListener('reload', this.safeUpdate);
+        this.props.page.removeListener('data.forms', this.safeUpdate);
+      }
+
+      /**
+       * get fields
+       */
+      getFields() {
+        // reduce
+        return (this.props.page.get('data.forms') || []).reduce((accum, form) => {
+          // check form
+          if (!form) return accum;
+
+          // get form
+          const actualForm = this.props.dashup.page(form);
+
+          // check fields
+          if (!actualForm || !actualForm.get('data.fields')) return [];
+
+          // return data
+          accum.push(...(actualForm.get('data.fields').map((field) => {
+            // clone field
+            const newField = { ...field };
+
+            // set form
+            newField.form = form;
+
+            // new field
+            return newField;
+          })));
+
+          // return accum
+          return accum;
+        }, []);
+      }
+
+      /**
+       * get groups
+       */
+      getGroups() {
+        // get group
+        if (!this.props.page.get('data.group')) return;
+
+        // get group field
+        const actualGroup = this.getFields().find((f) => f.uuid === this.props.page.get('data.group'));
+
+        // check group
+        if (!actualGroup) return;
+
+        // return group
+        return (actualGroup.options || []);
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // clone
+        const newProps = { ...(this.props) };
+
+        // delete
+        delete newProps.class;
+
+        // return
+        return newProps;
+      }
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
+    }
+  </script>
+</page-grid-view>
