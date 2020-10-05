@@ -20,7 +20,7 @@ export default class GridPage extends Struct {
    */
   get icon() {
     // return page type label
-    return 'fa fa-database';
+    return 'fa fa-align-justify';
   }
 
   /**
