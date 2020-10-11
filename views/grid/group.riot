@@ -1,5 +1,5 @@
 <grid-group>
-  <div class={ classes({ 'dashup-grid-group' : true, 'mb-5' : props.group && props.group.value, 'd-none' : !state.items || !state.items.length }) }>
+  <div class={ classes({ 'dashup-grid-group' : true, 'mb-5' : props.group && props.group.value, 'd-none' : !loading('grid') && (!state.items || !state.items.length) }) }>
 
     <!-- GROUP LABEL -->
     <div class="group-title" if={ props.group && props.group.label }>
@@ -14,7 +14,7 @@
     <!-- / LOADING -->
 
     <!-- GRID -->
-    <div class="grid-main">
+    <div if={ !loading('grid') } class="grid-main">
       <div class="grid-scroll">
 
         <!-- GRID HEADER -->
@@ -85,7 +85,7 @@
                         <b>Add Column</b>
                       </a>
                       <a each={ (column, i) in props.fields } href="#!" class="nav-link" onclick={ (e) => onAddColumn(e, column) }>
-                        { column.label || column.name }
+                        { column.label }
                       </a>
                     </div>
                   </div>
@@ -430,7 +430,7 @@
         }
         
         // set model
-        await this.props.onData('sort', sort);
+        await this.props.data('sort', sort);
         this.props.page.emit('do.sort');
       }
 
@@ -446,14 +446,16 @@
         const columns = this.props.page.get('data.columns') || [];
 
         // push column
-        columns.push(Object.assign({}, column, {
+        columns.push({
           id    : uuid(),
+          title : column.label,
+          field : column.uuid,
           order : columns.length + 1
-        }));
+        });
         this.initBasis(columns);
         
         // set model
-        await this.props.onData('columns', columns);
+        await this.props.data('columns', columns);
       }
 
       /**
@@ -504,7 +506,7 @@
         });
 
         // on data
-        this.props.onData('columns', this.props.page.get('data.columns') || []);
+        this.props.data('columns', this.props.page.get('data.columns') || []);
       }
 
       /**
@@ -549,7 +551,7 @@
         this.initBasis(columns);
 
         // on data
-        this.props.onData('columns', columns);
+        this.props.data('columns', columns);
       }
 
 
@@ -882,7 +884,7 @@
 
               // loading columns
               this.loading('columns', true);
-              this.props.onData('columns', columns);
+              this.props.data('columns', columns);
 
               // timeout
               setTimeout(() => {
@@ -1054,7 +1056,7 @@
           col.basis = newB - currentR;
 
           // update
-          this.props.onData('columns', this.props.page.get('data.columns'));
+          this.props.data('columns', this.props.page.get('data.columns'));
 
           // moving
           $('.column-moving').removeClass('column-moving');

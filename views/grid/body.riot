@@ -39,11 +39,11 @@
             <div class="dropdown-menu dropdown-menu-right p-0">
               <div class="card p-2">
                 <nav class="nav flex-column">
-                  <a each={ (form, i) in props.forms } href={ `/app/form/${form.id}/${item.get('_id')}` } class="nav-link">
+                  <a each={ (form, i) in props.forms } href={ `/app/${form}/${item.get('_id')}` } class="nav-link">
                     Update: { form.name }
                   </a>
                   <hr />
-                  <a href={ `/app/form/${props.forms[0].id}/${item.get('_id')}/remove?redirect=${window.location.href}` } class="nav-link text-danger">
+                  <a href={ `/app/${props.forms[0]}/${item.get('_id')}/remove?redirect=${window.location.href}` } class="nav-link text-danger">
                     Remove
                   </a>
                 </div>

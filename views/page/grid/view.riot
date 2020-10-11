@@ -9,7 +9,7 @@
       <i class="fa fa-spin fa-spinner h1" />
     </div>
     <div if={ !loading('grid') && props.page.get('data.model') && props.page.get('data.forms.0') } class="dashup-grid">
-      <dashup-view view="grid" type="page" model={ props.page.get('data.model') } groups={ getGroups() } fields={ getFields() } { ...getProps() } />
+      <dashup-view view="grid" type="page" model={ props.page.get('data.model') } groups={ getGroups() } fields={ props.context.fields } { ...getProps() } />
     </div>
   </div>
 
@@ -47,38 +47,6 @@
       }
 
       /**
-       * get fields
-       */
-      getFields() {
-        // reduce
-        return (this.props.page.get('data.forms') || []).reduce((accum, form) => {
-          // check form
-          if (!form) return accum;
-
-          // get form
-          const actualForm = this.props.dashup.page(form);
-
-          // check fields
-          if (!actualForm || !actualForm.get('data.fields')) return [];
-
-          // return data
-          accum.push(...(actualForm.get('data.fields').map((field) => {
-            // clone field
-            const newField = { ...field };
-
-            // set form
-            newField.form = form;
-
-            // new field
-            return newField;
-          })));
-
-          // return accum
-          return accum;
-        }, []);
-      }
-
-      /**
        * get groups
        */
       getGroups() {
@@ -86,7 +54,7 @@
         if (!this.props.page.get('data.group')) return;
 
         // get group field
-        const actualGroup = this.getFields().find((f) => f.uuid === this.props.page.get('data.group'));
+        const actualGroup = this.props.context.fields.find((f) => f.uuid === this.props.page.get('data.group'));
 
         // check group
         if (!actualGroup) return;
@@ -104,6 +72,7 @@
 
         // delete
         delete newProps.type;
+        delete newProps.item;
         delete newProps.view;
         delete newProps.class;
         delete newProps.struct;

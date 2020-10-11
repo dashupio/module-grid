@@ -3,16 +3,18 @@
     <div if={ props.column.type === 'id' } class="text-overflow">
       { props.item.get('_id') }
     </div>
-    <div if={ props.column.type !== 'id' } is={ `dashup-grid-field-${props.column.field.type}` } field={ props.column.field } value={ props.item ? props.item.get(props.column.field.name || props.column.field.uuid) : null } />
+    <div if={ props.column.type !== 'id' }>
+      <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-view` } view="view" field={ field } value={ getValue() } { ...getProps() } />
+    </div>
   </div>
   <div if={ state.popped && props.column.type !== 'id' } class="dropdown-menu card show p-0">
-    <div class={ classes({ 'card-body p-2' : true, 'd-flex flex-row' : !blocks.includes(props.column.field.type) }) }>
-      <div is={ `field-${props.column.field.type}` } field={ props.column.field } ref={ ref('field') } type={ 'grid' } class="field-column flex-1" data-value={ getValue() } get-id={ () => 'grid' } get-name={ () => 'grid' } preview={ true } />
+    <form class="card-body p-2" onsubmit={ (e) => onChange(e) }>
+      <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-input` } ref={ ref('input') } view="input" field={ field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => false } get-id={ () => 'grid' } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
       
-      <button class={ classes({ 'btn btn-success' : true, 'ml-2' : !blocks.includes(props.column.field.type), 'mt-2' : blocks.includes(props.column.field.type), 'disabled' : loading() }) } onclick={ (e) => onChange(e) }>
+      <button class={ `btn btn-success mt-2${loading() ? ' disabled' : ''}` } onclick={ (e) => onChange(e) }>
         { loading('submit') ? 'Loading...' : 'Submit' }
       </button>
-    </div>
+    </form>
   </div>
 
   <script>
@@ -36,6 +38,18 @@
 
         // bind methods
         this.getValue = this.getValue.bind(this);
+        this.getField = this.getField.bind(this);
+
+        // set field
+        this.field = this.getField();
+      }
+
+      /**
+       * on before mount
+       */
+      onBeforeUpdate(...args) {
+        // set field
+        this.field = this.getField();
       }
 
 
@@ -59,14 +73,24 @@
         // check can
         if (!this.props.dashup.can(this.props.page, 'submit')) return;
 
+        // set data
+        const data = [];
+        const field = this.field;
+
+        // get data
+        const formData = new FormData(this.$('form'));
+
+        // data
+        formData.forEach((v, k) => {
+          // set to data
+          data.push(v);
+        });
+
         // loading
         this.loading('submit', true);
 
         // set value
-        const val = (this.refs.field.val ? this.refs.field.val() : null) || $('select, input, textarea', this.$('.card-body')).val();
-
-        // set value
-        this.props.item.set(this.props.column.name || this.props.column.uuid, val);
+        this.props.item.set(field.name || field.uuid, Array.isArray(this.props.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
         await this.props.item.save();
 
         // loading
@@ -123,8 +147,39 @@
       * @return {*}
       */
       getValue() {
+        // get field
+        const field = this.field;
+
         // return object assign
-        return this.props.item ? this.props.item.get(this.props.column.name || this.props.column.uuid) : null;
+        return this.props.item ? this.props.item.get(field.name || field.uuid) : null;
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // props
+        const props = { ...this.props };
+
+        // delete
+        delete props.view;
+        delete props.type;
+        delete props.class;
+        delete props.struct;
+
+        // props
+        return props;
+      }
+
+      /**
+       * get field
+       */
+      getField() {
+        // get column
+        const column = this.props.column;
+
+        // push find
+        return this.props.fields.find((f) => f.uuid === ((column.field || {}).uuid || column.field)) || column;
       }
 
 
@@ -146,14 +201,6 @@
           // set ref
           this.refs[name] = that;
         };
-      }
-
-      /**
-       * classes
-       */
-      classes(obj) {
-        // return object
-        return Object.keys(obj).filter((k) => obj[k]).join(' ');
       }
 
       /**
