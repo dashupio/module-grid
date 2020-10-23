@@ -38,6 +38,7 @@
 
         // listeners
         this.props.page.on('reload', this.safeUpdate);
+        this.props.page.on('data.limit', this.safeUpdate);
         this.props.page.on('data.group', this.safeUpdate);
         this.props.page.on('data.model', this.safeUpdate);
         this.props.page.on('data.forms', this.safeUpdate);
@@ -52,6 +53,7 @@
 
         // listeners
         this.props.page.removeListener('reload', this.safeUpdate);
+        this.props.page.removeListener('data.limit', this.safeUpdate);
         this.props.page.removeListener('data.group', this.safeUpdate);
         this.props.page.removeListener('data.model', this.safeUpdate);
         this.props.page.removeListener('data.forms', this.safeUpdate);
@@ -79,7 +81,14 @@
         if (!actualGroup) return;
 
         // return group
-        return (actualGroup.options || []);
+        return [...((actualGroup.options || []))].map((option) => {
+          // check option
+          return {
+            ...option,
+
+            key : actualGroup.name || actualGroup.uuid,
+          };
+        });
       }
 
       /**
