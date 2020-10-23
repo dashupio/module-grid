@@ -50,6 +50,7 @@ export default class GridPage extends Struct {
       view   : 'page/grid/view',
       menu   : 'page/grid/menu',
       config : 'page/grid/config',
+      filter : 'page/grid/filter',
     };
   }
 

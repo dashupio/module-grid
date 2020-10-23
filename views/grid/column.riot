@@ -7,15 +7,6 @@
       <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-view` } view="view" field={ field } value={ getValue() } { ...getProps() } />
     </div>
   </div>
-  <div if={ state.popped && props.column.type !== 'id' } class="dropdown-menu card show p-0">
-    <form class="card-body p-2" onsubmit={ (e) => onChange(e) }>
-      <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-input` } ref={ ref('input') } view="input" field={ field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => false } get-id={ () => 'grid' } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
-      
-      <button class={ `btn btn-success mt-2${loading() ? ' disabled' : ''}` } onclick={ (e) => onChange(e) }>
-        { loading('submit') ? 'Loading...' : 'Submit' }
-      </button>
-    </form>
-  </div>
 
   <script>
 
@@ -60,47 +51,6 @@
       // ////////////////////////////////////////////////////////////////////////////
 
       /**
-       * on change
-       */
-      async onChange(e) {
-        // prevent default
-        e.preventDefault();
-        e.stopPropagation();
-
-        // check item
-        if (!this.props.item) return;
-
-        // check can
-        if (!this.props.dashup.can(this.props.page, 'submit')) return;
-
-        // set data
-        const data = [];
-        const field = this.field;
-
-        // get data
-        const formData = new FormData(this.$('form'));
-
-        // data
-        formData.forEach((v, k) => {
-          // set to data
-          data.push(v);
-        });
-
-        // loading
-        this.loading('submit', true);
-
-        // set value
-        this.props.item.set(field.name || field.uuid, Array.isArray(this.props.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
-        await this.props.item.save();
-
-        // loading
-        this.loading('submit', false);
-
-        // mouse up
-        if (this.closePopped) this.closePopped();
-      }
-
-      /**
        * on edit
        */
       onEdit(e) {
@@ -111,34 +61,8 @@
         // check can
         if (!this.props.dashup.can(this.props.page, 'submit')) return;
 
-        // mouse up
-        if (this.closePopped) this.closePopped();
-
-        // submit form
-        this.update({
-          popped : true,
-        });
-
-        // container
-        const container = $(this.$(`.dropdown-menu`));
-
-        // create close popped
-        const closePopped = (e) => {
-          // check
-          if (!e || (!container.is(e.target) && container.has(e.target).length === 0)) {
-            // close
-            this.update({
-              popped : false
-            });
-
-            // remove listener
-            $(document).off('mouseup', closePopped);
-          }
-        };
-        this.closePopped = closePopped;
-
-        // add listener
-        $(document).on('mouseup', closePopped);
+        // on edit
+        this.props.onEdit(this.props.item, this.field, this.$('.grid-column-content'));
       }
 
       /**
@@ -152,6 +76,17 @@
 
         // return object assign
         return this.props.item ? this.props.item.get(field.name || field.uuid) : null;
+      }
+
+      /**
+       * get field
+       */
+      getField() {
+        // get column
+        const column = this.props.column;
+
+        // push find
+        return this.props.fields.find((f) => f.uuid === ((column.field || {}).uuid || column.field)) || column;
       }
 
       /**
@@ -169,54 +104,6 @@
 
         // props
         return props;
-      }
-
-      /**
-       * get field
-       */
-      getField() {
-        // get column
-        const column = this.props.column;
-
-        // push find
-        return this.props.fields.find((f) => f.uuid === ((column.field || {}).uuid || column.field)) || column;
-      }
-
-
-      // ////////////////////////////////////////////////////////////////////////////
-      //
-      // MISC METHODS
-      //
-      // ////////////////////////////////////////////////////////////////////////////
-
-      /**
-       * ref
-       */
-      ref(name) {
-        // set refs
-        if (!this.refs) this.refs = {};
-
-        // return ref function
-        return (that) => {
-          // set ref
-          this.refs[name] = that;
-        };
-      }
-
-      /**
-       * set loading
-       */
-      loading(type, way) {
-        // set loading
-        if (!this.__loading) this.__loading = new Map();
-
-        // check loading
-        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
-        if (typeof way === 'undefined') return !!this.__loading.get(type);
-
-        // set loading
-        this.__loading.set(type, way);
-        this.update();
       }
     }
   </script>

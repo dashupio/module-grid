@@ -1,5 +1,9 @@
 <page-grid-view>
   <div>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.model') } onclick={ (e) => props.onConfig(e) }>
+      <i class="fa fa-exclamation-triangle mr-2" />
+      Please select a <b>model</b> for the grid.
+    </a>
     <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.forms.0') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select at least one <b>form</b> for the grid.
@@ -26,11 +30,14 @@
 
         // safe update
         this.safeUpdate = () => {
+          console.log('safe update');
           this.update();
         };
 
         // listeners
         this.props.page.on('reload', this.safeUpdate);
+        this.props.page.on('data.group', this.safeUpdate);
+        this.props.page.on('data.model', this.safeUpdate);
         this.props.page.on('data.forms', this.safeUpdate);
       }
 
@@ -43,6 +50,8 @@
 
         // listeners
         this.props.page.removeListener('reload', this.safeUpdate);
+        this.props.page.removeListener('data.group', this.safeUpdate);
+        this.props.page.removeListener('data.model', this.safeUpdate);
         this.props.page.removeListener('data.forms', this.safeUpdate);
       }
 

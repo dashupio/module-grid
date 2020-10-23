@@ -1,5 +1,5 @@
 <grid-group>
-  <div class={ classes({ 'dashup-grid-group' : true, 'mb-5' : props.group && props.group.value, 'd-none' : !loading('grid') && (!state.items || !state.items.length) }) }>
+  <div class={ classes({ 'dashup-grid-group' : true, 'mb-5' : props.group && props.group.value }) }>
 
     <!-- GROUP LABEL -->
     <div class="group-title" if={ props.group && props.group.label }>
@@ -141,9 +141,9 @@
       <div class="px-2 pt-3 mb-5" if={ !props.page.get('data.group.uuid') }>
         <div class="row">
           <div class="col-sm-6 d-flex align-items-center">
-            <small class="pagination-stats text-muted w-100">
-              Showing { (state.page - 1) * getLimit() } - { (state.page * getLimit()) > state.count ? state.count : (state.page * getLimit()) } of { state.count }
-            </small>
+            <div class="pagination-stats text-muted w-100">
+              Showing { ((state.page - 1) * getLimit()) + 1 } - { (state.page * getLimit()) > state.count ? state.count : (state.page * getLimit()) } of { state.count }
+            </div>
           </div>
           <div class="col-sm-6 d-flex align-items-center">
             <div class="w-100">
@@ -938,7 +938,10 @@
         $(document).on('mousedown', this.beginResize);
 
         // fix column sizing
-
+        if (this.$('.grid-scroll') && !this.$('.grid-scroll.ps')) {
+          // ps
+          this.ps = new PerfectScrollbar(this.$('.grid-scroll'));
+        }
       }
 
       /**

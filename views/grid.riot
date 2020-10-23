@@ -1,10 +1,19 @@
 <grid>
-  <div>
-    <grid-group if={ props.groups } each={ (group, i) in props.groups } group={ group } { ...props } />
-    <grid-group if={ !props.groups } { ...props } />
+  <grid-group if={ props.groups } each={ (group, i) in props.groups } group={ group } on-edit={ (i, f, el) => onEdit(e, i, el) } { ...props } />
+  <grid-group if={ !props.groups } on-edit={ (e, i, el) => onEdit(e, i, el) } { ...props } />
+  
+  <div if={ state.popped } class="dropdown-menu card show p-0" id="line-edit">
+    <form class="card-body p-2" onsubmit={ (e) => onChange(e) }>
+      <div if={ props.getField(state.field) } is={ props.getField(state.field).view ? `${props.getField(state.field).view}-field` : `field-${state.field.type}-input` } ref={ ref('input') } view="input" in="grid" field={ state.field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => false } get-id={ () => 'grid' } get-props={ (field) => getProps(field) } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
+      
+      <button class={ `btn btn-success mt-2${loading() ? ' disabled' : ''}` } onclick={ (e) => onChange(e) }>
+        { loading('submit') ? 'Loading...' : 'Submit' }
+      </button>
+    </form>
   </div>
 
   <script>
+    import Popper from 'popper.js';
 
     // import sub views
     import gridGroup from './grid/group';
@@ -21,6 +30,191 @@
         };
       }
 
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // bind
+        this.onEdit = this.onEdit.bind(this);
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // props
+        const props = { ...this.props };
+
+        // delete
+        delete props.view;
+        delete props.type;
+        delete props.class;
+        delete props.struct;
+
+        // props
+        props.getFields = this.getFields;
+
+        // props
+        return props;
+      }
+
+      /**
+      * get data
+      *
+      * @return {*}
+      */
+      getValue() {
+        // return object assign
+        return this.state.item ? this.state.item.get(this.state.field.name || this.state.field.uuid) : null;
+      }
+
+      /**
+       * get fields
+       */
+      getFields(parent) {
+        // return filtered fields
+        return (this.props.fields || []).filter((f) => f).sort((a, b) => {
+          // set order
+          if (!a.order) a.order = 0;
+          if (!b.order) b.order = 0;
+
+          // get order
+          if (a.order > b.order) return 1;
+          if (a.order < b.order) return -1;
+
+          // return no change
+          return 0;
+        }).filter((f) => {
+          // return parent
+          return !parent || (f.parent || 'root') === parent;
+        });
+      }
+
+      /**
+       * on edit
+       */
+      onEdit(item, field, el) {
+        // mouse up
+        if (this.closePopped) this.closePopped();
+
+        // submit form
+        this.update({
+          item,
+          field,
+          popped : true,
+        });
+
+        // container
+        const container = $(this.$('#line-edit'));
+
+        // create popped
+        this.popped = new Popper(el, this.$('#line-edit'), {
+          placement : 'bottom-end'
+        });
+
+        // width
+        const width = $(el).parent().width();
+
+        // width
+        container.width(width > 300 ? width : 300);
+
+        // create close popped
+        const closePopped = (e) => {
+          // check
+          if (!e || (!container.is(e.target) && container.has(e.target).length === 0)) {
+            // close
+            this.update({
+              item   : false,
+              popped : false
+            });
+
+            // remove listener
+            $(document).off('mouseup', closePopped);
+          }
+        };
+        this.closePopped = closePopped;
+
+        // add listener
+        $(document).on('mouseup', closePopped);
+      }
+
+      /**
+       * on change
+       */
+      async onChange(e) {
+        // prevent default
+        e.preventDefault();
+        e.stopPropagation();
+
+        // check item
+        if (!this.state.item) return;
+
+        // check can
+        if (!this.props.dashup.can(this.props.page, 'submit')) return;
+
+        // set data
+        const data = [];
+        const field = this.state.field;
+
+        // get data
+        const formData = new FormData(this.$('form'));
+
+        // data
+        formData.forEach((v, k) => {
+          // set to data
+          data.push(v);
+        });
+
+        // loading
+        this.loading('submit', true);
+
+        // set value
+        this.state.item.set(field.name || field.uuid, Array.isArray(this.state.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
+        await this.state.item.save();
+
+        // loading
+        this.loading('submit', false);
+
+        // mouse up
+        if (this.closePopped) this.closePopped();
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
     }
   </script>
 </grid>
