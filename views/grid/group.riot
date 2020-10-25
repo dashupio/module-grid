@@ -793,18 +793,24 @@
 
           // user query
           (this.props.page.get('user.where') || []).forEach((where) => {
+            // types
+            const numberTypes = ['gt', 'lt', 'gte', 'lte'];
+
             // add query
-            query = query[where[0]](where[1], where[2]);
-            countQ = countQ[where[0]](where[1], where[2]);
+            query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : whare[2]);
+            countQ = countQ[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : whare[2]);
           });
 
           // check sort
           if (this.props.page.get('data.sort.id')) {
-            // set sort
+            // sort column
             const sortColumn = (this.props.page.get('data.columns') || []).find((c) => c.id === this.props.page.get('data.sort.id'));
 
+            // set sort
+            const sortField = sortColumn && this.props.fields.find((f) => f.uuid === sortColumn.field);
+
             // sort by that
-            if (sortColumn) query = query.sort(sortColumn.field.name || sortColumn.field.uuid, this.props.page.get('data.sort.way'));
+            if (sortColumn && sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
           }
 
           // limit
