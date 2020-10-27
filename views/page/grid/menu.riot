@@ -1,9 +1,9 @@
 <page-grid-menu>
-  <button if={ !props.page.get('data.forms.1') } class="btn btn-success mr-2" type="button" onclick={ (e) => props.onItem(e) }>
+  <button if={ props.dashup.can(props.page, 'submit') && !props.page.get('data.forms.1') } class="btn btn-success mr-2" type="button" onclick={ (e) => props.onItem(e) }>
     <i class="fa fa-plus mr-2" />
     Create
   </button>
-  <div if={ props.page.get('data.forms.1') } class="btn-group dropdown">
+  <div if={ props.dashup.can(props.page, 'submit') && props.page.get('data.forms.1') } class="btn-group dropdown">
     <button class="btn btn-success dropdown-toggle" type="button" id="dropdown-add" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       <i class="fa fa-plus mr-2" />
       Create
