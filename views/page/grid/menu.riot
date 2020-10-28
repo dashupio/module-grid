@@ -3,7 +3,7 @@
     <i class="fa fa-plus mr-2" />
     Create
   </button>
-  <div if={ props.dashup.can(props.page, 'submit') && props.page.get('data.forms.1') } class="btn-group dropdown">
+  <div if={ props.dashup.can(props.page, 'submit') && props.page.get('data.forms.1') } class="btn-group dropdown mr-2">
     <button class="btn btn-success dropdown-toggle" type="button" id="dropdown-add" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       <i class="fa fa-plus mr-2" />
       Create
@@ -15,8 +15,20 @@
       </button>
     </div>
   </div>
+  <div class="btn-group dropdown mr-2" if={ getExports().length }>
+    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <i class="fa fa-download mr-2" />
+      Export
+    </button>
+
+    <div class="dropdown-menu">
+      <button class="dropdown-item" each={ (e, i) in getExports() }>
+        { getExport(e).title }
+      </button>
+    </div>
+  </div>
   <div class="dropdown d-inline-block" if={ !props.page.get('data.group.uuid') }>
-    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       Showing:
       <b class="ml-2">{ props.page.get('data.limit') || 20 }</b>
     </button>
