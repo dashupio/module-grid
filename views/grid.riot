@@ -4,7 +4,7 @@
   
   <div if={ state.popped } class="dropdown-menu card show p-0" id="line-edit">
     <form class="card-body p-2" onsubmit={ (e) => onChange(e) }>
-      <div if={ props.getField(state.field) } is={ props.getField(state.field).view ? `${props.getField(state.field).view}-field` : `field-${state.field.type}-input` } ref={ ref('input') } view="input" in="grid" field={ state.field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => false } get-id={ () => 'grid' } get-props={ (field) => getProps(field) } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
+      <div if={ props.getField(state.field) } is={ props.getField(state.field).view ? `${props.getField(state.field).view}-field` : `field-${state.field.type}-input` } ref={ ref('input') } view="input" in="grid" field={ state.field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => true } get-id={ () => 'grid' } get-props={ (field) => getProps(field) } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
       
       <button class={ `btn btn-success mt-2${loading() ? ' disabled' : ''}` } onclick={ (e) => onChange(e) }>
         { loading('submit') ? 'Loading...' : 'Submit' }

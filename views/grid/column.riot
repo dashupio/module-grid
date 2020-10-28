@@ -4,7 +4,7 @@
       { props.item.get('_id') }
     </div>
     <div if={ props.column.type !== 'id' }>
-      <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-view` } view="view" field={ field } value={ getValue() } { ...getProps() } />
+      <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-view` } view="view" field={ field } value={ getValue() } { ...(getProps()) } />
     </div>
   </div>
 
@@ -29,6 +29,7 @@
 
         // bind methods
         this.getValue = this.getValue.bind(this);
+        this.getProps = this.getProps.bind(this);
         this.getField = this.getField.bind(this);
 
         // set field
