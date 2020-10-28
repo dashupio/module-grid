@@ -68,6 +68,22 @@
         // set grid
         this.props.data('limit', limit);
       }
+
+      /**
+       * get export
+       */
+      getExport(e) {
+        // return
+        return this.props.connects.find((c) => c.type === e.type);
+      }
+
+      /**
+       * get exports
+       */
+      getExports() {
+        // export
+        return [...(this.props.page.get('connects') || [])].map(this.getExport).filter((c) => (c.data || {}).export);
+      }
     }
   </script>
 </page-grid-menu>
