@@ -220,7 +220,7 @@
        */
       getGroup() {
         // return value
-        return [...(this.props.context.fields)].filter((field) => ['select', 'checkbox'].includes(field.type)).map((field) => {
+        return [...(this.props.context.fields)].map((field) => {
           // return fields
           return {
             name     : field.label || field.name,
