@@ -797,8 +797,8 @@
             const numberTypes = ['gt', 'lt', 'gte', 'lte'];
 
             // add query
-            query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : whare[2]);
-            countQ = countQ[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : whare[2]);
+            query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
+            countQ = countQ[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
           });
 
           // check sort
@@ -814,10 +814,8 @@
           }
 
           // limit
-          if (!this.props.group || !this.props.group.key) {
-            query.skip(((this.state.page || 1) - 1) * this.getLimit());
-            query.limit(this.getLimit());
-          }
+          query.skip(((this.state.page || 1) - 1) * this.getLimit());
+          query.limit(this.getLimit());
 
           // listen
           items = await query.listen();
