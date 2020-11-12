@@ -99,7 +99,7 @@
         <!-- / GRID HEADER -->
 
         <!-- GRID BODY -->
-        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } { ...props } />
+        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } { ...getProps() } />
         <!-- / GRID BODY -->
       </div>
 
@@ -269,6 +269,9 @@
        * on before mount
        */
       onBeforeMount(...args) {
+        // do ref
+        if (this.props.ref) this.props.ref(this);
+
         // bind
         this.init = this.init.bind(this);
 
@@ -356,6 +359,9 @@
        * on select item
        */
       onSelect(item, way) {
+        // on select
+        if (this.props.onSelect) return this.props.onSelect(item);
+
         // check item
         let selected = this.state.selected || [];
 
@@ -736,6 +742,20 @@
       getForms () {
         // return forms
         return (this.props.page.get('data.forms') || [this.props.page.get('data.form'), this.props.page.get('data.order.form')]).filter((f) => f);
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // props
+        const props = { ...(this.props) };
+
+        // check ref
+        delete props.ref;
+
+        // return props
+        return props;
       }
 
 

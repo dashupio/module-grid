@@ -1,6 +1,6 @@
 <grid>
-  <grid-group if={ props.groups } each={ (group, i) in props.groups } group={ group } on-edit={ (i, f, el) => onEdit(e, i, el) } { ...props } />
-  <grid-group if={ !props.groups } on-edit={ (e, i, el) => onEdit(e, i, el) } { ...props } />
+  <grid-group if={ props.groups } each={ (group, i) in props.groups } ref={ ref('body') } group={ group } on-edit={ (i, f, el) => onEdit(e, i, el) } { ...getProps() } />
+  <grid-group if={ !props.groups } ref={ ref('body') } on-edit={ (e, i, el) => onEdit(e, i, el) } { ...getProps() } />
   
   <div if={ state.popped } class="dropdown-menu card show p-0" id="line-edit">
     <form class="card-body p-2" onsubmit={ (e) => onChange(e) }>
@@ -34,7 +34,11 @@
        * on before mount
        */
       onBeforeMount(...args) {
+        // do ref
+        if (this.props.ref) this.props.ref(this);
+
         // bind
+        this.ref = this.ref.bind(this);
         this.onEdit = this.onEdit.bind(this);
       }
 
@@ -46,6 +50,7 @@
         const props = { ...this.props };
 
         // delete
+        delete props.ref;
         delete props.view;
         delete props.type;
         delete props.class;
