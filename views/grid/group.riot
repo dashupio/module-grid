@@ -293,6 +293,12 @@
 
         // init basis
         this.initBasis();
+
+        // safe update
+        this.safeUpdate = () => {
+          // update
+          this.update();
+        };
       }
 
       /**
@@ -320,6 +326,13 @@
         this.props.page.removeListener('do.data.limit', this.init);
         this.props.page.removeListener('do.user.where', this.init);
         this.props.page.removeListener('do.data.filter', this.init);
+        
+        // items
+        if (this.state.items && this.state.items.removeListener) {
+          // safe update
+          this.state.items.removeListener('update', this.safeUpdate);
+          this.state.items.deafen();
+        }
       }
 
       /**
@@ -739,6 +752,13 @@
         // get model
         let items = [];
         let count = null;
+        
+        // items
+        if (this.state.items && this.state.items.removeListener) {
+          // safe update
+          this.state.items.removeListener('update', this.safeUpdate);
+          this.state.items.deafen();
+        }
 
         // get model
         const model = this.props.model;
@@ -820,6 +840,9 @@
           // listen
           items = await query.listen();
           count = await countQ.count();
+
+          // listen
+          items.on('update', this.safeUpdate);
         }
 
         // update
