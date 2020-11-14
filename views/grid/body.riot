@@ -6,7 +6,7 @@
       </div>
     </div>
 
-    <div if={ !loading('grid') } each={ (item, i) in props.items } onclick={ (e) => onRow(e, item) } class={ classes({ 'grid-row' : true, 'grid-row-selected' : isSelected(item) }) }>
+    <div if={ !loading('grid') } each={ (item, i) in getItems() } onclick={ (e) => onRow(e, item) } class={ classes({ 'grid-row' : true, 'grid-row-selected' : isSelected(item) }) }>
 
       <div class="grid-column grid-column-edit">
         <div class="column-inner">
@@ -110,7 +110,15 @@
        */
       isSelected(item) {
         // selected
-        return (this.props.selected || []).find((i) => i.get('_id') === item.get('_id'));
+        return [...(this.props.selected || []), ...(this.props.active || [])].find((i) => i.get('_id') === item.get('_id'));
+      }
+
+      /**
+       * get items
+       */
+      getItems() {
+        // return items
+        return this.props.rows || this.props.items;
       }
 
 

@@ -144,7 +144,7 @@
       <!-- / BULK ACTION -->
 
       <!-- PAGINATION -->
-      <div class="px-2 pt-3 mb-5" if={ !props.page.get('data.group.uuid') }>
+      <div class="px-2 pt-3 mb-5" if={ !props.noPagination }>
         <div class="row">
           <div class="col-sm-6 d-flex align-items-center">
             <div class="pagination-stats text-muted w-100">
@@ -878,6 +878,7 @@
 
         // check ref
         delete props.ref;
+        delete props.items;
 
         // return props
         return props;
@@ -894,6 +895,12 @@
        * init
        */
       async init () {
+        // check if props has rows
+        if (this.props.rows) {
+          // return
+          return;
+        }
+        
         // get model
         let items = [];
         let count = null;
