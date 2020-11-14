@@ -57,6 +57,7 @@
                   <div class="dropdown-menu dropdown-menu-right" aria-labelledby={ `grid-column-${i}` }>
                     <a class="dropdown-item" href="#!" onclick={ (e) => onRenameColumn(e, column) }>Rename Column</a>
                     <a class="dropdown-item" href="#!" onclick={ (e) => onRemoveColumn(e, column) }>Remove Column</a>
+                    <a if={ column.field === 'custom' } class="dropdown-item" href="#!" onclick={ (e) => onUpdateColumn(e, column) }>Update Column</a>
                   </div>
                 </div>
 
@@ -86,6 +87,11 @@
                       </a>
                       <a each={ (column, i) in props.fields } href="#!" class="nav-link" onclick={ (e) => onAddColumn(e, column) }>
                         { column.label }
+                      </a>
+                      <hr />
+                      <a href="#!" class="nav-link" onclick={ (e) => onAddCustom(e) }>
+                        <i class="fa fa-function mr-2" />
+                        Custom
                       </a>
                     </div>
                   </div>
@@ -172,9 +178,7 @@
 
     </div>
     <!-- / GRID -->
-
-
-
+    
     <div if={ state.removing } class="modal fade" id="column-remove">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -230,6 +234,45 @@
             </button>
             <button type="button" class={ classes({ 'btn btn-danger' : true, 'disabled' : loading('item.remove') }) } disabled={ loading('item.remove') } onclick={ (e) => onCompleteRemoveItems(e, state.selected) }>
               { loading('item.remove') ? 'Loading...' : 'Confirm' }
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div if={ state.updating } class="modal fade" id="column-update">
+      <div class="modal-dialog">
+        <div class="modal-content">
+
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <h5 class="modal-title">
+              Updating <b>{ state.updating.title }</b>
+            </h5>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+
+          <!-- Modal body -->
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">
+                Column Display
+              </label>
+              <code-block ref={ ref('display') } mode="handlebars" content={ state.updating.view || '' } prevent-update={ true } on-change={ (e) => onColumnView(e) } />
+              <div class="alert alert-primary mt-2">
+                <hbs template={ state.updating.view || '' } data={ state.items && state.items[0] ? state.items[0].get() : {} } />
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal footer -->
+          <div class="modal-footer">
+            <button type="button" class="btn btn-info mr-auto" data-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class="btn btn-success" onclick={ (e) => onConfirmUpdate(e) }>
+              Save
             </button>
           </div>
 
@@ -482,6 +525,67 @@
       }
 
       /**
+       * on add custom
+       */
+      async onAddCustom(e) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        const columns = this.props.page.get('data.columns') || [];
+        const column = {
+          id    : uuid(),
+          title : 'Custom Label',
+          field : 'custom',
+          order : columns.length + 1
+        };
+
+        // push column
+        columns.push(column);
+        this.initBasis(columns);
+        
+        // set model
+        await this.props.data('columns', columns);
+
+        // on column view
+        this.onUpdateColumn(e, column);
+      }
+
+      /**
+       * on column view
+       */
+      onColumnView(val) {
+        // set val
+        const columns = this.props.page.get('data.columns') || [];
+
+        // get column
+        const column = columns.find((c) => c.id === this.state.updating.id);
+
+        // set view
+        column.view = val;
+        this.state.updating.view = val;
+
+        // update
+        this.update();
+      }
+
+      /**
+       * on column view
+       */
+      onConfirmUpdate(e) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // set data
+        $('#column-update').modal('hide');
+
+        // set
+        this.props.data('columns', this.props.page.get('data.columns'));
+      }
+
+      /**
        * on rename column
        */
       onRenameColumn(e, column) {
@@ -550,6 +654,26 @@
 
         // show modal
         $(this.$('#column-remove')).modal('show');
+      }
+
+      /**
+       * on update column
+       */
+      onUpdateColumn(e, column) {
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
+
+        // close
+        if (this.closePopped) this.closePopped();
+
+        // set page
+        this.update({
+          updating : column,
+        });
+
+        // show modal
+        $(this.$('#column-update')).modal('show');
       }
       
       /**

@@ -3,8 +3,12 @@
     <div if={ props.column.type === 'id' } class="text-overflow">
       { props.item.get('_id') }
     </div>
-    <div if={ props.column.type !== 'id' }>
+    <div if={ props.column.field !== 'custom' && props.column.type !== 'id' }>
       <div if={ props.getField(field) } is={ props.getField(field).view ? `${props.getField(field).view}-field` : `field-${field.type}-view` } view="view" field={ field } value={ getValue() } { ...(getProps()) } />
+    </div>
+    <div if={ props.column.field === 'custom' }>
+      <hbs template={ props.column.view || '' } data={ props.item ? props.item.toJSON() : {} } />
+      { window.console.log(props.item ? props.item : {}) }
     </div>
   </div>
 
