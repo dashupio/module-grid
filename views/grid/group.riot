@@ -35,10 +35,10 @@
                   </div>
                   <input if={ column.id === state.renaming } class="column-body-inner" value={ column.title } onkeyup={ (e) => onKeyupRenameColumn(e, column) } />
                 </div>
-                <button class={ classes({ 'btn btn-sm btn-light column-btn ml-2 mr-0' : true, 'active' : props.page.get('data.sort.id') === column.id }) } onclick={ (e) => onSort(e, column) }>
-                  <i class="fa fa-arrows-v" if={ props.page.get('data.sort.id') !== column.id } />
-                  <i class="fa fa-arrow-up" if={ props.page.get('data.sort.way') === -1 && props.page.get('data.sort.id') === column.id } />
-                  <i class="fa fa-arrow-down" if={ props.page.get('data.sort.way') === 1 && props.page.get('data.sort.id') === column.id } />
+                <button class={ classes({ 'btn btn-sm btn-light column-btn ml-2 mr-0' : true, 'active' : props.page.get('data.sort.id') === column.field }) } onclick={ (e) => onSort(e, column) }>
+                  <i class="fa fa-arrows-v" if={ props.page.get('data.sort.id') !== column.field } />
+                  <i class="fa fa-arrow-up" if={ props.page.get('data.sort.way') === -1 && props.page.get('data.sort.id') === column.field } />
+                  <i class="fa fa-arrow-down" if={ props.page.get('data.sort.way') === 1 && props.page.get('data.sort.id') === column.field } />
                 </button>
 
                 <div class="btn-group dropdown ml-0 mr-0" if={ column.id === state.renaming }>
@@ -240,7 +240,7 @@
         </div>
       </div>
     </div>
-
+    
     <div if={ state.updating } class="modal fade" id="column-update">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -485,10 +485,10 @@
         let sort = this.props.page.get('data.sort') || {};
 
         // set sort
-        if (sort.id !== column.id) {
-          sort.id  = column.id;
+        if (sort.id !== column.field) {
+          sort.id  = column.field;
           sort.way = -1;
-        } else if (sort.id === column.id) {
+        } else if (sort.id === column.field) {
           if (sort.way === -1) {
             sort.way = 1;
           } else {
