@@ -351,14 +351,14 @@
       /**
        * on mounted
        */
-      async onMounted(...args) {
+      onMounted(...args) {
         // init
-        await this.init();
-
-        // other inits
-        this.initSize();
-        this.initSort();
-        this.initResize();
+        this.init().then(() => {
+          // other inits
+          this.initSize();
+          this.initSort();
+          this.initResize();
+        });
       }
 
       /**
@@ -897,6 +897,18 @@
       async init () {
         // check if props has rows
         if (this.props.rows) {
+          // loading
+          this.loading('grid', true);
+          
+          // return rows
+          this.update({
+            items : await this.props.rows(this.getLimit(), ((this.state.page || 1) - 1) * this.getLimit()),
+            count : this.props.count,
+          });
+
+          // loading
+          this.loading('grid', false);
+
           // return
           return;
         }
