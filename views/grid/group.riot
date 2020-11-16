@@ -484,8 +484,13 @@
         // check sort
         let sort = this.props.page.get('data.sort') || {};
 
-        // set sort
-        if (sort.id !== column.field) {
+        // get field
+        const sortField = this.props.fields.find((f) => f.uuid === column.field);
+
+        // sort field
+        if (!sortField) {
+          sort = null;
+        } else if (sort.id !== column.field) {
           sort.id  = column.field;
           sort.way = -1;
         } else if (sort.id === column.field) {
@@ -987,14 +992,11 @@
 
           // check sort
           if (this.props.page.get('data.sort.id')) {
-            // sort column
-            const sortColumn = (this.props.page.get('data.columns') || []).find((c) => c.id === this.props.page.get('data.sort.id'));
-
-            // set sort
-            const sortField = sortColumn && this.props.fields.find((f) => f.uuid === sortColumn.field);
+            // get field
+            const sortField = this.props.fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
 
             // sort by that
-            if (sortColumn && sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
+            if (sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
           }
 
           // limit
