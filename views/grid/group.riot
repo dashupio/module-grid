@@ -257,6 +257,12 @@
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label">
+                Column Sort
+              </label>
+              <input class="form-control" ref={ ref('sort') } onchange={ (e) => onColumnSort(e) } />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">
                 Column Display
               </label>
               <code-block ref={ ref('display') } mode="handlebars" content={ state.updating.view || '' } prevent-update={ true } on-change={ (e) => onColumnView(e) } />
@@ -488,12 +494,13 @@
         const sortField = this.props.fields.find((f) => f.uuid === column.field);
 
         // sort field
-        if (!sortField) {
+        if (!sortField && !column.sort) {
           sort = null;
-        } else if (sort.id !== column.field) {
-          sort.id  = column.field;
-          sort.way = -1;
-        } else if (sort.id === column.field) {
+        } else if (sort.id !== column.field && sort.id !== column.sort) {
+          sort.id   = column.field;
+          sort.way  = -1;
+          sort.sort = column.sort;
+        } else if (sort.id === column.field || sort.id === column.sort) {
           if (sort.way === -1) {
             sort.way = 1;
           } else {
@@ -571,6 +578,24 @@
         // set view
         column.view = val;
         this.state.updating.view = val;
+
+        // update
+        this.update();
+      }
+
+      /**
+       * on column sort
+       */
+      onColumnSort(e) {
+        // set val
+        const columns = this.props.page.get('data.columns') || [];
+
+        // get column
+        const column = columns.find((c) => c.id === this.state.updating.id);
+
+        // set view
+        column.sort = e.target.value;
+        this.state.updating.sort = e.target.value;
 
         // update
         this.update();
@@ -993,7 +1018,9 @@
           // check sort
           if (this.props.page.get('data.sort.id')) {
             // get field
-            const sortField = this.props.fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
+            const sortField = this.props.page.get('data.sort.sort') ? {
+              name : this.props.page.get('data.sort.sort'),
+            } : this.props.fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
 
             // sort by that
             if (sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
