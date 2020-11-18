@@ -13,7 +13,7 @@
           <div class="column-body">
             <div class="form-check">
               <input if={ !props.dashup.can(props.page, 'submit') } class="form-check-input" disabled type="checkbox" value="selected" id={ item.get('_id') } />
-              <input if={ props.dashup.can(props.page, 'submit') } class="form-check-input" type="checkbox" value="selected" id={ item.get('_id') } onchange={ (e) => onSelect(e, item) } />
+              <input if={ props.dashup.can(props.page, 'submit') } class="form-check-input" type="checkbox" value="selected" checked={ isSelected(item) } id={ item.get('_id') } onchange={ (e) => onSelect(e, item) } />
             </div>
           </div>
         </div>

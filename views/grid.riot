@@ -1,13 +1,13 @@
 <grid>
-  <grid-group if={ props.groups } each={ (group, i) in props.groups } ref={ ref('body') } group={ group } on-edit={ (i, f, el) => onEdit(e, i, el) } { ...getProps() } />
-  <grid-group if={ !props.groups } ref={ ref('body') } on-edit={ (e, i, el) => onEdit(e, i, el) } { ...getProps() } />
+  <grid-group if={ props.groups } each={ (group, i) in props.groups } ref={ ref('body') } group={ group } on-edit={ (i, f, el, bulk) => onEdit(e, i, el, bulk) } { ...getProps() } />
+  <grid-group if={ !props.groups } ref={ ref('body') } on-edit={ (e, i, el, bulk) => onEdit(e, i, el, bulk) } { ...getProps() } />
   
   <div if={ state.popped } class="dropdown-menu card show p-0" id="line-edit">
     <form class="card-body p-2" onsubmit={ (e) => onChange(e) }>
       <div if={ props.getField(state.field) } is={ props.getField(state.field).view ? `${props.getField(state.field).view}-field` : `field-${state.field.type}-input` } ref={ ref('input') } view="input" in="grid" field={ state.field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => true } get-id={ () => 'grid' } get-props={ (field) => getProps(field) } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
       
       <button class={ `btn btn-success mt-2${loading() ? ' disabled' : ''}` } onclick={ (e) => onChange(e) }>
-        { loading('submit') ? 'Loading...' : 'Submit' }
+        { loading('submit') ? 'Loading...' : !state.bulk || !state.confirm ? `Update${state.bulk ? ` ${state.bulk.length.toLocaleString()} items` : ''}` : 'Confirm' }
       </button>
     </form>
   </div>
@@ -98,13 +98,14 @@
       /**
        * on edit
        */
-      onEdit(item, field, el) {
+      onEdit(item, field, el, bulk) {
         // mouse up
         if (this.closePopped) this.closePopped();
 
         // submit form
         this.update({
           item,
+          bulk,
           field,
           popped : true,
         });
@@ -151,6 +152,19 @@
         e.preventDefault();
         e.stopPropagation();
 
+        // check
+        if (this.state.bulk && !this.state.confirm) {
+          // confirm
+          return this.update({
+            confirm : true,
+          });
+        }
+
+        // confirm
+        this.update({
+          confirm : false,
+        });
+
         // check item
         if (!this.state.item) return;
 
@@ -173,9 +187,27 @@
         // loading
         this.loading('submit', true);
 
-        // set value
-        this.state.item.set(field.name || field.uuid, Array.isArray(this.state.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
-        await this.state.item.save();
+        // check bulk
+        if (this.state.bulk) {
+          // promises
+          const promises = [];
+
+          // set values
+          this.state.bulk.forEach((item) => {
+            // set
+            item.set(field.name || field.uuid, Array.isArray(item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
+
+            // save
+            promises.push(item.save());
+          });
+
+          // await all
+          await Promise.all(promises);
+        } else {
+          // set value
+          this.state.item.set(field.name || field.uuid, Array.isArray(this.state.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
+          await this.state.item.save();
+        }
 
         // loading
         this.loading('submit', false);

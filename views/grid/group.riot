@@ -22,6 +22,11 @@
 
           <div class="grid-column grid-column-add">
             <div class="column-inner">
+              <div if={ props.dashup.can(props.page, 'submit') } class="column-body">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" value="selected" onchange={ (e) => onSelectAll(e) } />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -110,33 +115,34 @@
       </div>
 
       <!-- BULK ACTION -->
-      <div if={ props.dashup.can(props.page, 'submit') && state.selected && state.selected.length } class="grid-footer">
-        <div class="grid-column grid-column-add">
-          <div class="column-inner align-items-center justify-content-center">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" value="selected" checked onclick={ (e) => onClearSelect(e) } />
-            </div>
-          </div>
+      <div if={ props.dashup.can(props.page, 'submit') && state.selected && state.selected.length }>
+        <div class="mt-3 mb-2">
+          <b>{ state.selected.length.toLocaleString() } Items Selected</b>
         </div>
-
-        <div class="grid-column-scroll">
-          <div class="grid-column flex-1">
-            <div class="grid-field">
-              <div class="field-inner">
-                <div class="grid-column-content">
-                  { state.selected.length.toLocaleString() } Items Selected
+        <div class="grid-body">
+          <div class="grid-row">
+            <div class="grid-column grid-column-add">
+              <div class="column-inner align-items-center justify-content-center">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" value="selected" checked onclick={ (e) => onClearSelect(e) } />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="grid-column grid-column-edit">
-          <div class="column-inner align-items-center justify-content-center">
-            <div class="column-body">
-              <button class="btn btn-sm btn-outline-danger" onclick={ (e) => onRemoveItems(e) }>
-                <i class="fa fa-trash" />
-              </button>
+            <div class="grid-column-scroll">
+              <div each={ (column, i) in props.page.get('data.columns') } class={ classes({ 'grid-field' : true, 'active' : false }) } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
+                <grid-column i={ i } class="field-inner" column={ column } item={ empty } on-edit={ (e, i, el) => props.onEdit(e, i, el, state.selected) } { ...getProps(true) } />
+              </div>
+            </div>
+
+            <div class="grid-column grid-column-edit">
+              <div class="column-inner align-items-center justify-content-center">
+                <div class="column-body">
+                  <button class="btn btn-sm btn-outline-danger" onclick={ (e) => onRemoveItems(e) }>
+                    <i class="fa fa-trash" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -297,6 +303,7 @@
 
     // grid body
     import gridBody from './body';
+    import gridColumn from './column';
 
     // export default
     export default class GridGroup {
@@ -314,6 +321,7 @@
         // return grid
         return {
           gridBody,
+          gridColumn,
         };
       }
 
@@ -326,6 +334,7 @@
 
         // bind
         this.init = this.init.bind(this);
+        this.empty = new this.props.dashup.Model({}, this.props.dashup);
 
         // bind
         this.beginResize = this.beginResize.bind(this);
@@ -429,6 +438,26 @@
         this.update({
           selected,
         });
+      }
+
+      /**
+       * on select all
+       */
+      onSelectAll(e) {
+        // check item
+        if ($(e.target).is(':checked')) {
+          this.update({
+            selected : this.state.items,
+          });
+        } else {
+          this.update({
+            selected : [],
+          });
+          this.state.items.forEach((item) => {
+            // prop
+            $(`#${item.get('_id')}`).prop('checked', false);
+          });
+        }
       }
 
       /**
@@ -920,13 +949,16 @@
       /**
        * get props
        */
-      getProps() {
+      getProps(noEdit) {
         // props
         const props = { ...(this.props) };
 
         // check ref
         delete props.ref;
         delete props.items;
+
+        // delete
+        if (noEdit) delete props.onEdit;
 
         // return props
         return props;
