@@ -257,9 +257,15 @@
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label">
+                Column Title
+              </label>
+              <input class="form-control" ref={ ref('title') } value={ state.updating.title } onchange={ (e) => onColumnTitle(e) } />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">
                 Column Sort
               </label>
-              <input class="form-control" ref={ ref('sort') } onchange={ (e) => onColumnSort(e) } />
+              <input class="form-control" ref={ ref('sort') } value={ state.updating.sort } onchange={ (e) => onColumnSort(e) } />
             </div>
             <div class="mb-3">
               <label class="form-label">
@@ -276,9 +282,6 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-info mr-auto" data-dismiss="modal">
               Close
-            </button>
-            <button type="button" class="btn btn-success" onclick={ (e) => onConfirmUpdate(e) }>
-              Save
             </button>
           </div>
 
@@ -580,7 +583,25 @@
         this.state.updating.view = val;
 
         // update
-        this.update();
+        this.props.data('columns', columns);
+      }
+
+      /**
+       * on column view
+       */
+      onColumnTitle(e) {
+        // set val
+        const columns = this.props.page.get('data.columns') || [];
+
+        // get column
+        const column = columns.find((c) => c.id === this.state.updating.id);
+
+        // set view
+        column.title = e.target.value;
+        this.state.updating.title = e.target.value;
+
+        // update
+        this.props.data('columns', columns);
       }
 
       /**
@@ -598,22 +619,7 @@
         this.state.updating.sort = e.target.value;
 
         // update
-        this.update();
-      }
-
-      /**
-       * on column view
-       */
-      onConfirmUpdate(e) {
-        // add page
-        e.preventDefault();
-        e.stopPropagation();
-
-        // set data
-        $('#column-update').modal('hide');
-
-        // set
-        this.props.data('columns', this.props.page.get('data.columns'));
+        this.props.data('columns', columns);
       }
 
       /**
@@ -685,6 +691,12 @@
 
         // show modal
         $(this.$('#column-remove')).modal('show');
+        $(this.$('#column-remove')).one('hidden.bs.modal', () => {
+          // reset hunting
+          this.update({
+            removing : null,
+          });
+        });
       }
 
       /**
@@ -705,6 +717,12 @@
 
         // show modal
         $(this.$('#column-update')).modal('show');
+        $(this.$('#column-update')).one('hidden.bs.modal', () => {
+          // reset hunting
+          this.update({
+            updating : null,
+          });
+        });
       }
       
       /**

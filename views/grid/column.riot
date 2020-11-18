@@ -58,12 +58,15 @@
        * on edit
        */
       onEdit(e) {
-        // add page
-        e.preventDefault();
-        e.stopPropagation();
+        // check target
+        if ($(e.target).is('a') || $(e.target).closest('a').length) return;
 
         // check edit
         if (this.props.column.field === 'custom') return;
+
+        // add page
+        e.preventDefault();
+        e.stopPropagation();
 
         // check can
         if (!this.props.dashup.can(this.props.page, 'submit')) return;
