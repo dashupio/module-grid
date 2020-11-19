@@ -7,7 +7,7 @@
       <div if={ props.getField(state.field) } is={ props.getField(state.field).view ? `${props.getField(state.field).view}-field` : `field-${state.field.type}-input` } ref={ ref('input') } view="input" in="grid" field={ state.field } ref={ ref('field') } class="field-column flex-1" value={ getValue() } should-read={ () => true } get-id={ () => 'grid' } get-props={ (field) => getProps(field) } get-name={ () => 'grid' } preview={ true } { ...getProps() } />
       
       <button class={ `btn btn-success mt-2${loading() ? ' disabled' : ''}` } onclick={ (e) => onChange(e) }>
-        { loading('submit') ? 'Loading...' : !state.bulk || !state.confirm ? `Update${state.bulk ? ` ${state.bulk.length.toLocaleString()} items` : ''}` : 'Confirm' }
+        { loading('submit') ? 'Loading...' : !state.bulk || !state.confirm ? `Update${state.bulk ? ` ${state.bulk.count.toLocaleString()} items` : ''}` : 'Confirm' }
       </button>
     </form>
   </div>
@@ -189,20 +189,8 @@
 
         // check bulk
         if (this.state.bulk) {
-          // promises
-          const promises = [];
-
-          // set values
-          this.state.bulk.forEach((item) => {
-            // set
-            item.set(field.name || field.uuid, Array.isArray(item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
-
-            // save
-            promises.push(item.save());
-          });
-
-          // await all
-          await Promise.all(promises);
+          // log
+          console.log(this.state.bulk);
         } else {
           // set value
           this.state.item.set(field.name || field.uuid, Array.isArray(this.state.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));

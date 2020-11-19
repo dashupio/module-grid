@@ -7,14 +7,8 @@
     </div>
     <!-- / GROUP LABEL -->
 
-    <!-- LOADING -->
-    <div if={ loading('grid') } class="text-center">
-      <i class="fa fa-spinner fa-spin h1 my-5" />
-    </div>
-    <!-- / LOADING -->
-
     <!-- GRID -->
-    <div if={ !loading('grid') } class="grid-main">
+    <div class="grid-main">
       <div class="grid-scroll">
 
         <!-- GRID HEADER -->
@@ -110,14 +104,14 @@
         <!-- / GRID HEADER -->
 
         <!-- GRID BODY -->
-        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } { ...getProps() } />
+        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } loading={ loading } { ...getProps() } />
         <!-- / GRID BODY -->
       </div>
 
       <!-- BULK ACTION -->
-      <div if={ props.dashup.can(props.page, 'submit') && state.selected && state.selected.length }>
+      <div if={ props.dashup.can(props.page, 'submit') && state.selected && state.selected.type }>
         <div class="mt-3 mb-2">
-          <b>{ state.selected.length.toLocaleString() } Items Selected</b>
+          <b>{ getSelected().toLocaleString() } Items Selected</b>
         </div>
         <div class="grid-body">
           <div class="grid-row">
@@ -216,14 +210,14 @@
       </div>
     </div>
 
-    <div if={ state.selected && state.selected.length } class="modal fade" id="selected-remove">
+    <div if={ getSelected() } class="modal fade" id="selected-remove">
       <div class="modal-dialog">
         <div class="modal-content">
 
           <!-- Modal Header -->
           <div class="modal-header">
             <h5 class="modal-title">
-              Removing <b>{ state.selected.length.toLocaleString() } items</b>
+              Removing <b>{ getSelected().toLocaleString() } items</b>
             </h5>
             <button type="button" class="btn-close" data-dismiss="modal">&times;</button>
           </div>
@@ -238,7 +232,7 @@
             <button type="button" class="btn btn-info mr-auto" data-dismiss="modal">
               Close
             </button>
-            <button type="button" class={ classes({ 'btn btn-danger' : true, 'disabled' : loading('item.remove') }) } disabled={ loading('item.remove') } onclick={ (e) => onCompleteRemoveItems(e, state.selected) }>
+            <button type="button" class={ classes({ 'btn btn-danger' : true, 'disabled' : loading('item.remove') }) } disabled={ loading('item.remove') } onclick={ (e) => onCompleteRemoveItems(e) }>
               { loading('item.remove') ? 'Loading...' : 'Confirm' }
             </button>
           </div>
@@ -335,9 +329,14 @@
         // bind
         this.init = this.init.bind(this);
         this.empty = new this.props.dashup.Model({}, this.props.dashup);
+        this.loading = this.loading.bind(this);
 
         // bind
+        this.onItems = this.onItems.bind(this);
+        this.onSelect = this.onSelect.bind(this);
+        this.onSelectAll = this.onSelectAll.bind(this);
         this.beginResize = this.beginResize.bind(this);
+        this.onItemsEmpty = this.onItemsEmpty.bind(this);
         this.onUpdateColumn = this.onUpdateColumn.bind(this);
 
         // page/count
@@ -425,14 +424,41 @@
         if (this.props.onSelect) return this.props.onSelect(item);
 
         // check item
-        let selected = this.state.selected || [];
+        let selected = this.state.selected || {
+          type  : 'items',
+          items : [],
+        };
 
-        // selected item
-        if (!way) {
-          selected = selected.filter((s) => s.get('_id') !== item.get('_id'));
-        } else if (!selected.find((s) => s.get('_id') === item.get('_id'))) {
-          selected.push(item);
+        // check items
+        if (['all', 'except'].includes(selected.type)) {
+          selected.type = 'except';
+        } else {
+          selected.type = 'items';
         }
+
+        // check items
+        if (!way && selected.type === 'except') {
+          // filter
+          if (!selected.items.includes(item.get('_id'))) selected.items.push(item.get('_id'));
+        } else if (way && selected.type === 'except') {
+          // filter
+          selected.items = selected.items.filter((i) => i !== item.get('_id'));
+
+          // check length
+          if (!selected.items.length && selected.type === 'except') {
+            // type all
+            selected.type = 'all';
+          }
+        } else if (way) {
+          // add
+          if (!selected.items.includes(item.get('_id'))) selected.items.push(item.get('_id'));
+        } else {
+          // remove
+          selected.items = selected.items.filter((i) => i !== item.get('_id'));
+        }
+
+        // set count
+        selected.count = this.getSelected(selected);
 
         // selected update
         this.update({
@@ -446,17 +472,22 @@
       onSelectAll(e) {
         // check item
         if ($(e.target).is(':checked')) {
+          // set items
           this.update({
-            selected : this.state.items,
+            selected : {
+              type  : 'all',
+              items : [],
+              count : this.getSelected({
+                type  : 'all',
+                items : [],
+              }),
+            }
           });
         } else {
           this.update({
-            selected : [],
+            selected : null,
           });
-          this.state.items.forEach((item) => {
-            // prop
-            $(`#${item.get('_id')}`).prop('checked', false);
-          });
+          $('.form-check-input:checked', this.root).prop('checked', false);
         }
       }
 
@@ -470,8 +501,9 @@
           e.stopPropagation();
         }
 
+        // clear selected
         this.update({
-          selected : [],
+          selected : null,
         });
         $('.form-check-input:checked', this.root).prop('checked', false);
       }
@@ -491,12 +523,17 @@
       /**
        * on complete remove items
        */
-      async onCompleteRemoveItems(e, items) {
+      async onCompleteRemoveItems(e) {
         // loading
         this.loading('item.remove', true);
-
-        // loop items
-        await Promise.all(items.map((item) => item.remove()));
+        
+        // do bulk remove
+        await this.props.dashup.rpc(this.state.items[0].get('_meta'), 'model.bulk', {
+          by    : this.state.selected.type,
+          type  : 'remove',
+          items : this.state.selected.items,
+          query : this.getQuery().query,
+        });
         
         // show modal
         $(this.$('#selected-remove')).modal('hide');
@@ -803,12 +840,14 @@
        */
       onPage(e, page) {
         // prevent scrolling to top
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
 
         // get page
         this.state.page = page;
-        this.props.page.emit('do.page');
+        return this.init();
       }
 
       /**
@@ -816,12 +855,14 @@
        */
       onLast(e) {
         // prevent scrolling to top
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
 
         // get page
         this.state.page = Math.floor(this.state.count / this.getLimit()) + 1;
-        this.props.page.emit('do.page');
+        return this.init();
       }
 
       /**
@@ -829,12 +870,14 @@
        */
       onFirst(e) {
         // prevent scrolling to top
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
 
         // get page
         this.state.page = 1;
-        this.props.page.emit('do.page');
+        return this.init();
       }
 
       /**
@@ -842,12 +885,14 @@
        */
       onNext(e) {
         // prevent scrolling to top
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
 
         // get page
         this.state.page = this.hasNext() ? (this.state.page + 1) : this.state.page;
-        this.props.page.emit('do.page');
+        return this.init();
       }
 
       /**
@@ -855,12 +900,41 @@
        */
       onPrev(e) {
         // prevent scrolling to top
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
 
         // get page
         this.state.page = this.hasPrev() ? (this.state.page - 1) : 1;
-        this.props.page.emit('do.page');
+        return this.init();
+      }
+
+      /**
+       * on items
+       */
+      onItems(items, count) {
+        // check items
+        if (!items) items = this.state.items;
+        if (!count) count = this.state.count;
+
+        // page/limit
+        const page = this.state.page;
+        const limit = this.getLimit();
+
+        // safe update
+        this.safeUpdate();
+
+        // on items
+        if (this.props.onItems) this.props.onItems(items, count, { page, limit });
+      }
+
+      /**
+       * on items
+       */
+      onItemsEmpty() {
+        // on items empty
+        this.onItems();
       }
 
       /**
@@ -949,6 +1023,29 @@
       }
 
       /**
+       * get selected
+       */
+      getSelected(selected) {
+        // selected
+        if (!selected) selected = this.state.selected;
+
+        // check 0
+        if (!selected || !selected.type) return 0;
+
+        // selected
+        if (selected.type === 'items') {
+          return selected.items.length;
+        } else if (selected.type === 'all') {
+          return this.state.count || 0;
+        } else if (selected.type === 'except') {
+          return (this.state.count - selected.items.length);
+        }
+        
+        // return 0
+        return 0;
+      }
+
+      /**
        * get forms
        */
       getForms () {
@@ -974,6 +1071,102 @@
         return props;
       }
 
+      /**
+       * get query
+       */
+      getQuery() {
+        // get model
+        const model = this.props.model;
+
+        // set query
+        let query = this.props.dashup.page(model);
+
+        // forms
+        const forms = this.getForms();
+
+        // check items
+        if (forms.length) {
+          // loop forms
+          query = query.in('_meta.form', forms);
+        }
+
+        // load filter
+        let filter = null;
+
+        // try/catch
+        try {
+          filter = JSON.parse(this.props.page.get('data.filter'));
+        } catch (e) {}
+
+        // add initial where
+        if (filter) {
+          // add wheres
+          filter.forEach((where) => {
+            // where
+            query = query.where(where);
+          });
+        }
+
+        // check group
+        if (this.props.group && this.props.group.key) {
+          // where
+          query = query.where({
+            [this.props.group.key] : this.props.group.value,
+          });
+        }
+
+        // test by user
+        if ((this.props.page.get('user.filter') || {}).me) {
+          // get user fields
+          const userFields = [...(this.props.fields || [])].filter((f) => (this.props.page.get('data.user') || []).includes(f.uuid));
+          
+          // loop fields
+          query = query[userFields.length > 1 ? 'or' : 'where'](...(userFields.map((userField) => {
+            // return or
+            return {
+              [userField.name || userField.uuid] : this.props.dashup.get('_meta.member'),
+            };
+          })));
+        }
+
+        // user query
+        (this.props.page.get('user.where') || []).forEach((where) => {
+          // types
+          const numberTypes = ['gt', 'lt', 'gte', 'lte'];
+
+          // add query
+          query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
+        });
+
+        // get filter tags
+        if ((this.props.page.get('user.filter.tags') || []).length) {
+          // check vals
+          const tagFields = [...(this.props.fields || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+
+          // loop fields
+          query = query[tagFields.length > 1 ? 'or' : 'where'](...(tagFields.map((tagField) => {
+            // return or
+            return {
+              [tagField.name || tagField.uuid] : this.props.page.get('user.filter.tags')
+            };
+          })));
+        }
+
+        // check sort
+        if (this.props.page.get('data.sort.id')) {
+          // get field
+          const sortField = this.props.page.get('data.sort.sort') ? {
+            name : this.props.page.get('data.sort.sort'),
+          } : this.props.fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
+
+          // sort by that
+          if (sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
+        }
+
+        // return query
+        return query;
+      }
+
 
       // ////////////////////////////////////////////////////////////////////////////
       //
@@ -985,24 +1178,6 @@
        * init
        */
       async init () {
-        // check if props has rows
-        if (this.props.rows) {
-          // loading
-          this.loading('grid', true);
-          
-          // return rows
-          this.update({
-            items : await this.props.rows(this.getLimit(), ((this.state.page || 1) - 1) * this.getLimit()),
-            count : this.props.count,
-          });
-
-          // loading
-          this.loading('grid', false);
-
-          // return
-          return;
-        }
-        
         // get model
         let items = [];
         let count = null;
@@ -1010,7 +1185,7 @@
         // items
         if (this.state.items && this.state.items.removeListener) {
           // safe update
-          this.state.items.removeListener('update', this.safeUpdate);
+          this.state.items.removeListener('update', this.onItemsEmpty);
           this.state.items.deafen();
         }
 
@@ -1022,69 +1197,9 @@
 
         // query by
         if (model) {
-          // set query
-          let query = this.props.dashup.page(model);
-          let countQ = this.props.dashup.page(model);
-
-          // forms
-          const forms = this.getForms();
-
-          // check items
-          if (forms.length) {
-            // loop forms
-            query = query.in('_meta.form', forms);
-            countQ = countQ.in('_meta.form', forms);
-          }
-
-          // load filter
-          let filter = null;
-
-          // try/catch
-          try {
-            filter = JSON.parse(this.props.page.get('data.filter'));
-          } catch (e) {}
-
-          // add initial where
-          if (filter) {
-            // add wheres
-            filter.forEach((where) => {
-              // where
-              query = query.where(where);
-              countQ = countQ.where(where);
-            });
-          }
-
-          // check group
-          if (this.props.group && this.props.group.key) {
-            // where
-            query = query.where({
-              [this.props.group.key] : this.props.group.value,
-            });
-            countQ = countQ.where({
-              [this.props.group.key] : this.props.group.value,
-            });
-          }
-
-          // user query
-          (this.props.page.get('user.where') || []).forEach((where) => {
-            // types
-            const numberTypes = ['gt', 'lt', 'gte', 'lte'];
-
-            // add query
-            query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
-            countQ = countQ[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
-          });
-
-          // check sort
-          if (this.props.page.get('data.sort.id')) {
-            // get field
-            const sortField = this.props.page.get('data.sort.sort') ? {
-              name : this.props.page.get('data.sort.sort'),
-            } : this.props.fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
-
-            // sort by that
-            if (sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
-          }
+          // get query
+          const query = this.getQuery();
+          const countQ = this.getQuery();
 
           // limit
           query.skip(((this.state.page || 1) - 1) * this.getLimit());
@@ -1095,7 +1210,8 @@
           count = await countQ.count();
 
           // listen
-          items.on('update', this.safeUpdate);
+          items.on('update', this.onItemsEmpty);
+          this.onItems(items, count);
         }
 
         // update

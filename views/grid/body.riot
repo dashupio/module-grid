@@ -1,12 +1,12 @@
 <grid-body>
   <div class="grid-body">
-    <div if={ loading('grid') } class="card">
+    <div if={ props.loading('grid') } class="card">
       <div class="card-body py-5 text-center">
         <i class="fa fa-spinner fa-spin h1" />
       </div>
     </div>
 
-    <div if={ !loading('grid') } each={ (item, i) in props.items } onclick={ (e) => onRow(e, item) } class={ classes({ 'grid-row' : true, 'grid-row-selected' : isSelected(item) }) }>
+    <div if={ !props.loading('grid') } each={ (item, i) in props.items } onclick={ (e) => onRow(e, item) } class={ classes({ 'grid-row' : true, 'grid-row-selected' : isSelected(item) }) }>
 
       <div class="grid-column grid-column-edit">
         <div class="column-inner">
@@ -109,8 +109,13 @@
        * is selected
        */
       isSelected(item) {
-        // selected
-        return [...(this.props.selected || []), ...(this.props.active || [])].find((i) => i.get('_id') === item.get('_id'));
+        // check selected
+        if (!this.props.selected) return;
+
+        // check type
+        if (this.props.selected.type === 'all') return true;
+        if (this.props.selected.type === 'items') return this.props.selected.items.includes(item.get('_id'));
+        if (this.props.selected.type === 'all-minus') return !this.props.selected.items.includes(item.get('_id'));
       }
 
       // ////////////////////////////////////////////////////////////////////////////
@@ -139,22 +144,6 @@
       classes(obj) {
         // return object
         return Object.keys(obj).filter((k) => obj[k]).join(' ');
-      }
-
-      /**
-       * set loading
-       */
-      loading(type, way) {
-        // set loading
-        if (!this.__loading) this.__loading = new Map();
-
-        // check loading
-        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
-        if (typeof way === 'undefined') return !!this.__loading.get(type);
-
-        // set loading
-        this.__loading.set(type, way);
-        this.update();
       }
     }
   </script>
