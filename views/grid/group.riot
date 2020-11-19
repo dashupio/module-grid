@@ -40,10 +40,10 @@
                   </div>
                   <input if={ column.id === state.renaming } class="column-body-inner" value={ column.title } onkeyup={ (e) => onKeyupRenameColumn(e, column) } />
                 </div>
-                <button class={ classes({ 'btn btn-sm btn-light column-btn ml-2 mr-0' : true, 'active' : props.page.get('data.sort.id') === column.field }) } onclick={ (e) => onSort(e, column) }>
-                  <i class="fa fa-arrows-v" if={ props.page.get('data.sort.id') !== column.field } />
-                  <i class="fa fa-arrow-up" if={ props.page.get('data.sort.way') === -1 && props.page.get('data.sort.id') === column.field } />
-                  <i class="fa fa-arrow-down" if={ props.page.get('data.sort.way') === 1 && props.page.get('data.sort.id') === column.field } />
+                <button class={ classes({ 'btn btn-sm btn-light column-btn ml-2 mr-0' : true, 'active' : isSorted(column) }) } onclick={ (e) => onSort(e, column) }>
+                  <i class="fa fa-arrows-v" if={ !isSorted(column) } />
+                  <i class="fa fa-arrow-up" if={ props.page.get('data.sort.way') === -1 && isSorted(column) } />
+                  <i class="fa fa-arrow-down" if={ props.page.get('data.sort.way') === 1 && isSorted(column) } />
                 </button>
 
                 <div class="btn-group dropdown ml-0 mr-0" if={ column.id === state.renaming }>
@@ -525,18 +525,28 @@
         // get field
         const sortField = this.props.fields.find((f) => f.uuid === column.field);
 
-        // sort field
-        if (!sortField && !column.sort) {
-          sort = null;
-        } else if (sort.id !== column.field && sort.id !== column.sort) {
-          sort.id   = column.field;
-          sort.way  = -1;
-          sort.sort = column.sort;
-        } else if (sort.id === column.field || sort.id === column.sort) {
-          if (sort.way === -1) {
-            sort.way = 1;
+        // check sort
+        if (column.sort) {
+          if (sort.sort && sort.sort === column.sort) {
+            if (sort.way === -1) {
+              sort.way = 1;
+            } else {
+              sort = null;
+            }
           } else {
-            sort = null;
+            sort.way  = -1;
+            sort.sort = column.sort;
+          }
+        } else {
+          if (sort.id && sort.id === column.field) {
+            if (sort.way === -1) {
+              sort.way = 1;
+            } else {
+              sort = null;
+            }
+          } else {
+            sort.id  = column.field;
+            sort.way = -1;
           }
         }
         
@@ -1096,6 +1106,22 @@
 
         // loading
         this.loading('grid', false);
+      }
+
+      /**
+       * check sorted
+       */
+      isSorted(column) {
+        // check sort
+        if (this.props.page.get('data.sort.sort')) {
+          return this.props.page.get('data.sort.sort') === column.sort;
+        }
+        if (this.props.page.get('data.sort.id')) {
+          return this.props.page.get('data.sort.id') === column.field;
+        }
+
+        // false
+        return false;
       }
 
       /**
