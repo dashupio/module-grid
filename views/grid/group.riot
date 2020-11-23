@@ -109,7 +109,7 @@
       </div>
 
       <!-- BULK ACTION -->
-      <div if={ props.dashup.can(props.page, 'submit') && state.selected && state.selected.type }>
+      <div if={ props.dashup.can(props.page, 'submit') && getSelected() }>
         <div class="mt-3 mb-2">
           <b>{ getSelected().toLocaleString() } Items Selected</b>
         </div>
@@ -125,7 +125,7 @@
 
             <div class="grid-column-scroll">
               <div each={ (column, i) in props.page.get('data.columns') } class={ classes({ 'grid-field' : true, 'active' : false }) } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
-                <grid-column i={ i } class="field-inner" column={ column } item={ empty } on-edit={ (e, i, el) => props.onEdit(e, i, el, state.selected) } { ...getProps(true) } />
+                <grid-column i={ i } class="field-inner" column={ column } item={ empty } on-edit={ (e, i, el) => props.onEdit(e, i, el, getBulk()) } { ...getProps(true) } />
               </div>
             </div>
 
@@ -1051,6 +1051,14 @@
       getForms () {
         // return forms
         return (this.props.page.get('data.forms') || [this.props.page.get('data.form'), this.props.page.get('data.order.form')]).filter((f) => f && this.props.dashup.page(f));
+      }
+
+      /**
+       * get bulk
+       */
+      getBulk() {
+        // return
+        return { ...(this.state.selected), query : this.getQuery().query };
       }
 
       /**

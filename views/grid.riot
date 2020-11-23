@@ -173,6 +173,7 @@
 
         // set data
         const data = [];
+        const body = {};
         const field = this.state.field;
 
         // get data
@@ -189,8 +190,23 @@
 
         // check bulk
         if (this.state.bulk) {
-          // log
-          console.log(this.state.bulk);
+          // do bulk update
+          await this.props.dashup.rpc({
+            page   : this.props.page.get('_id'),
+            form   : this.props.page.get('data.form') || this.props.page.get('data.forms.0'),
+            model  : this.props.model,
+            dashup : this.props.dashup.get('_id'),
+          }, 'model.bulk', {
+            by    : this.state.bulk.type,
+            type  : 'update',
+            items : this.state.bulk.items,
+            query : this.state.bulk.query,
+          }, {
+            [field.name || field.uuid] : data,
+          });
+          
+          // emit
+          this.props.page.emit('do.page');
         } else {
           // set value
           this.state.item.set(field.name || field.uuid, Array.isArray(this.state.item.get(field.name || field.uuid)) ? data : (data.length > 1 ? data : data[0]));
