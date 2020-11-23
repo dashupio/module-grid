@@ -1,16 +1,16 @@
 <page-grid-menu>
-  <button if={ props.dashup.can(props.page, 'submit') && !props.page.get('data.forms.1') } class="btn btn-success mr-2" type="button" onclick={ (e) => props.onItem(e) }>
+  <button if={ props.dashup.can(props.page, 'submit') && getForms().length === 1 } class="btn btn-success mr-2" type="button" onclick={ (e) => props.onItem(e) }>
     <i class="fa fa-plus mr-2" />
     Create
   </button>
-  <div if={ props.dashup.can(props.page, 'submit') && props.page.get('data.forms.1') } class="btn-group dropdown mr-2">
+  <div if={ props.dashup.can(props.page, 'submit') && getForms().length > 1 } class="btn-group dropdown mr-2">
     <button class="btn btn-success dropdown-toggle" type="button" id="dropdown-add" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       <i class="fa fa-plus mr-2" />
       Create
     </button>
 
     <div class="dropdown-menu" aria-labelledby="dropdown-add">
-      <button each={ (form, i) in props.page.get('data.forms') } if={ props.dashup.page(form) } class="dropdown-item" onclick={ (e) => props.onItem(e, null, form) }>
+      <button each={ (form, i) in getForms() } if={ props.dashup.page(form) } class="dropdown-item" onclick={ (e) => props.onItem(e, null, form) }>
         { props.dashup.page(form).get('name') }
       </button>
     </div>
@@ -67,6 +67,14 @@
         
         // set grid
         this.props.data('limit', limit);
+      }
+
+      /**
+       * get forms
+       */
+      getForms() {
+        // filter forms
+        return this.props.page.get('data.forms').filter((f) => this.props.dashup.page(f));
       }
 
       /**
