@@ -1050,7 +1050,7 @@
        */
       getForms () {
         // return forms
-        return (this.props.page.get('data.forms') || [this.props.page.get('data.form'), this.props.page.get('data.order.form')]).filter((f) => f);
+        return (this.props.page.get('data.forms') || [this.props.page.get('data.form'), this.props.page.get('data.order.form')]).filter((f) => f && this.props.dashup.page(f));
       }
 
       /**
