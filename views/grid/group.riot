@@ -407,6 +407,17 @@
         this.initSize();
         this.initSort();
         this.initResize();
+
+        /**
+         * search
+         */
+        if (this.props.search !== this.search) {
+          // search
+          this.search = this.props.search;
+
+          // do init
+          this.init();
+        }
       }
 
 
@@ -1113,6 +1124,12 @@
             // where
             query = query.where(where);
           });
+        }
+
+        // search
+        if (this.props.search && this.props.search.length) {
+          // add search
+          query = query.search(this.props.search);
         }
 
         // check group
