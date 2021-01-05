@@ -16,9 +16,9 @@
 
   <!-- PER PAGE -->
   <div class="dropdown d-inline-block mr-2" if={ !props.page.get('data.group.uuid') }>
-    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <button class="btn btn-light dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       Per Page:
-      <b class="ml-2">{ props.page.get('data.limit') || 20 }</b>
+      <b class="ml-1">{ props.page.get('data.limit') || 20 }</b>
     </button>
     <div class="dropdown-menu dropdown-menu-right">
       <button each={ (limit, i) in limits } class={ `dropdown-item${limit === (props.page.get('data.limit') || 20) ? ' active' : ''}` } onclick={ (e) => onLimit(e, limit) }>
@@ -30,12 +30,12 @@
 
   <!-- CREATE -->
   <template if={ props.page.get('data.model') && props.dashup.page(props.page.get('data.model')) }>
-    <button if={ props.dashup.can(props.page, 'submit') && !props.page.get('data.forms.1') } class="btn btn-primary mr-2" type="button" onclick={ (e) => props.onItem(e) }>
+    <button if={ props.dashup.can(props.page, 'submit') && !props.page.get('data.forms.1') } class="btn btn-dark mr-2" type="button" onclick={ (e) => props.onItem(e) }>
       <i class="fat fa-plus mr-2" />
       { props.dashup.page(props.page.get('data.model')).get('name') }
     </button>
     <div if={ props.dashup.can(props.page, 'submit') && props.page.get('data.forms.1') } class="btn-group dropdown mr-2">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="dropdown-add" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      <button class="btn btn-dark dropdown-toggle" type="button" id="dropdown-add" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         <i class="fat fa-plus mr-2" />
         { props.dashup.page(props.page.get('data.model')).get('name') }
       </button>
