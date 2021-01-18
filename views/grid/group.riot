@@ -350,6 +350,7 @@
         this.props.page.on('do.data.forms', this.init);
         this.props.page.on('do.data.limit', this.init);
         this.props.page.on('do.user.where', this.init);
+        this.props.page.on('do.user.filter', this.init);
         this.props.page.on('do.data.filter', this.init);
         
         // min and max widths
@@ -389,6 +390,7 @@
         this.props.page.removeListener('do.data.forms', this.init);
         this.props.page.removeListener('do.data.limit', this.init);
         this.props.page.removeListener('do.user.where', this.init);
+        this.props.page.removeListener('do.user.filter', this.init);
         this.props.page.removeListener('do.data.filter', this.init);
         
         // items
