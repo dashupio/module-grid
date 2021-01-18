@@ -4,15 +4,11 @@
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select a <b>model</b> for the grid.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.forms.0') } onclick={ (e) => props.onConfig(e) }>
-      <i class="fa fa-exclamation-triangle mr-2" />
-      Please select at least one <b>form</b> for the grid.
-    </a>
 
     <div if={ loading('grid') } class="text-center my-5 py-5">
       <i class="fa fa-spin fa-spinner h1" />
     </div>
-    <div if={ !loading('grid') && props.page.get('data.model') && props.page.get('data.forms.0') } class="dashup-grid">
+    <div if={ !loading('grid') && props.page.get('data.model') && getForms()[0] } class="dashup-grid">
       <dashup-view view="grid" type="page" struct="grid" model={ props.page.get('data.model') } groups={ getGroups() } fields={ props.context.fields } get-field={ getField } { ...getProps() } />
     </div>
   </div>
@@ -108,6 +104,17 @@
 
         // return
         return newProps;
+      }
+
+      /**
+       * get forms
+       */
+      getForms() {
+        // get forms
+        return this.props.page.get('data.forms') || Array.from(this.props.dashup.get('pages').values()).filter((v) => {
+          // return forms
+          return v.get('type') === 'form' && v.get('data.model') === this.props.page.get('_id');
+        });
       }
 
       /**

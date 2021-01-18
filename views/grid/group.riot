@@ -1059,9 +1059,16 @@
       /**
        * get forms
        */
-      getForms () {
-        // return forms
-        return (this.props.page.get('data.forms') || [this.props.page.get('data.form'), this.props.page.get('data.order.form')]).filter((f) => f && this.props.dashup.page(f));
+      getForms() {
+        // get forms
+        if (this.props.page.get('data.forms')) return this.props.page.get('data.forms');
+        if (this.props.page.get('data.form')) return [this.props.page.get('data.form'), this.props.page.get('data.order.form')].filter((f) => f && this.props.dashup.page(f));
+        
+        // return any form
+        return Array.from(this.props.dashup.get('pages').values()).filter((v) => {
+          // return forms
+          return v.get('type') === 'form' && v.get('data.model') === (this.props.page.get('data.model') || this.props.page.get('_id'));
+        }).map((p) => p.get('_id'));
       }
 
       /**
@@ -1163,16 +1170,25 @@
           query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
         });
 
-        // get filter tags
-        if ((this.props.page.get('user.filter.tags') || []).length) {
-          // check vals
-          const tagFields = [...(this.props.fields || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+        // check vals
+        const tagFields = [...(this.props.fields || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
 
+        // get tags
+        const userTags = (this.props.page.get('user.filter.tags') || []).filter((id) => {
+          // return find
+          return tagFields.find((t) => {
+            // check id
+            return (t.options || []).find((o) => o.value === id);
+          });
+        });
+
+        // get filter tags
+        if (userTags.length) {
           // loop fields
           query = query[tagFields.length > 1 ? 'or' : 'where'](...(tagFields.map((tagField) => {
             // return or
             return {
-              [tagField.name || tagField.uuid] : this.props.page.get('user.filter.tags')
+              [tagField.name || tagField.uuid] : userTags,
             };
           })));
         }
