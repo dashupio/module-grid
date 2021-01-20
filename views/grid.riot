@@ -1,5 +1,5 @@
 <grid>
-  <grid-group if={ props.groups } each={ (group, i) in props.groups } ref={ ref('body') } group={ group } on-edit={ (i, f, el, bulk) => onEdit(e, i, el, bulk) } { ...getProps() } />
+  <grid-group if={ props.groups } each={ (group, i) in props.groups } ref={ ref('body') } group={ group } on-edit={ (e, i, el, bulk) => onEdit(e, i, el, bulk) } { ...getProps() } />
   <grid-group if={ !props.groups } ref={ ref('body') } on-edit={ (e, i, el, bulk) => onEdit(e, i, el, bulk) } { ...getProps() } />
   
   <div if={ state.popped } class="dropdown-menu card show p-0" id="line-edit">
@@ -101,6 +101,8 @@
       onEdit(item, field, el, bulk) {
         // mouse up
         if (this.closePopped) this.closePopped();
+
+        console.log(item, field, el, bulk);
 
         // submit form
         this.update({

@@ -30,6 +30,9 @@
         // blocks
         this.blocks = ['image', 'code', 'file', 'address', 'wysiwyg', 'textarea'];
 
+        // bind
+        this.onEdit = this.onEdit.bind(this);
+
         // bind methods
         this.getValue = this.getValue.bind(this);
         this.getProps = this.getProps.bind(this);
