@@ -9,7 +9,7 @@
       <i class="fa fa-spin fa-spinner h1" />
     </div>
     <div if={ !loading('grid') && props.page.get('data.model') && getForms()[0] } class="dashup-grid">
-      <dashup-view view="grid" type="page" struct="grid" model={ props.page.get('data.model') } groups={ getGroups() } fields={ props.context.fields } get-field={ getField } { ...getProps() } />
+      <dashup-view view="grid" type="page" struct="grid" model={ props.page.get('data.model') } groups={ state.groups } fields={ props.context.fields } get-field={ getField } query={ getQuery } { ...getProps() } />
     </div>
   </div>
 
@@ -28,16 +28,45 @@
         this.safeUpdate = () => {
           this.update();
         };
+        this.groupUpdate = async () => {
+          // grid
+          this.loading('grid', true);
+          this.update({
+            groups : await this.loadGroups(),
+          });
+          this.loading('grid', false);
+        };
+
+        // loading
+        this.__loading = new Map();
+
+        // set value
+        this.__loading.set('grid', true);
 
         // bind methods
         this.getField = this.getField.bind(this);
+        this.getQuery = this.getQuery.bind(this);
 
         // listeners
         this.props.page.on('reload', this.safeUpdate);
         this.props.page.on('data.limit', this.safeUpdate);
-        this.props.page.on('data.group', this.safeUpdate);
         this.props.page.on('data.model', this.safeUpdate);
         this.props.page.on('data.forms', this.safeUpdate);
+        this.props.page.on('data.group', this.groupUpdate);
+      }
+
+      /**
+       * on before mount
+       */
+      async onMounted(...args) {
+        // check frontend
+        if (typeof window === 'undefined') return;
+
+        // load
+        this.update({
+          groups : await this.loadGroups(),
+        });
+        this.loading('grid', false);
       }
 
       /**
@@ -50,9 +79,9 @@
         // listeners
         this.props.page.removeListener('reload', this.safeUpdate);
         this.props.page.removeListener('data.limit', this.safeUpdate);
-        this.props.page.removeListener('data.group', this.safeUpdate);
         this.props.page.removeListener('data.model', this.safeUpdate);
         this.props.page.removeListener('data.forms', this.safeUpdate);
+        this.props.page.removeListener('data.group', this.groupUpdate);
       }
 
       /**
@@ -66,7 +95,7 @@
       /**
        * get groups
        */
-      getGroups() {
+      async loadGroups() {
         // get group
         if (!this.props.page.get('data.group')) return;
 
@@ -77,14 +106,52 @@
         if (!actualGroup) return;
 
         // return group
-        return [...((actualGroup.options || []))].map((option) => {
-          // check option
-          return {
-            ...option,
+        if (actualGroup.options) {
+          // return options
+          return [...(actualGroup.options || [])].map((option) => {
+            // check option
+            return {
+              ...option,
 
-            key : actualGroup.name || actualGroup.uuid,
-          };
-        });
+              key : actualGroup.name || actualGroup.uuid,
+            };
+          });
+        }
+
+        // check if user
+        if (actualGroup.type === 'user') {
+          // members
+          const members = await eden.router.get(`/app/${this.props.dashup.get('_id')}/member/query`);
+
+          // return members
+          return members.map((member) => {
+            // return key
+            return {
+              key   : actualGroup.name || actualGroup.uuid,
+              label : member.name,
+              value : member.id,
+            };
+          });
+        }
+
+        // load distinct
+        const counts = await this.getQuery().count(actualGroup.name || actualGroup.uuid, true);
+
+        // check counts
+        if (counts && Object.keys(counts).length) {
+          // return map
+          return Object.keys(counts).map((key) => {
+            // return key
+            return {
+              key   : actualGroup.name || actualGroup.uuid,
+              label : key,
+              value : key,
+            };
+          });
+        }
+
+        // return nothing
+        return null;
       }
 
       /**
@@ -111,10 +178,113 @@
        */
       getForms() {
         // get forms
-        return this.props.page.get('data.forms') || Array.from(this.props.dashup.get('pages').values()).filter((v) => {
+        return this.props.page.get('data.forms') || Array.from(this.props.dashup.get('pages').keys()).filter((k) => {
+          // get page
+          const v = this.props.dashup.page(k);
+
           // return forms
-          return v.get('type') === 'form' && v.get('data.model') === this.props.page.get('_id');
+          return v.get('type') === 'form' && v.get('data.model') === this.props.page.get('data.model');
         });
+      }
+
+      /**
+       * get query
+       */
+      getQuery() {
+        // set query
+        let query = this.props.dashup.page(this.props.page.get('data.model'));
+
+        // forms
+        const forms = this.getForms();
+
+        // check items
+        if (forms.length) {
+          // loop forms
+          query = query.in('_meta.form', forms);
+        }
+
+        // load filter
+        let filter = null;
+
+        // try/catch
+        try {
+          filter = JSON.parse(this.props.page.get('data.filter'));
+        } catch (e) {}
+
+        // add initial where
+        if (filter) {
+          // add wheres
+          filter.forEach((where) => {
+            // where
+            query = query.where(where);
+          });
+        }
+
+        // search
+        if (this.props.search && this.props.search.length) {
+          // add search
+          query = query.search(this.props.search);
+        }
+
+        // test by user
+        if ((this.props.page.get('user.filter') || {}).me) {
+          // get user fields
+          const userFields = [...(this.props.context.fields || [])].filter((f) => (this.props.page.get('data.user') || []).includes(f.uuid));
+          
+          // loop fields
+          query = query[userFields.length > 1 ? 'or' : 'where'](...(userFields.map((userField) => {
+            // return or
+            return {
+              [userField.name || userField.uuid] : this.props.dashup.get('_meta.member'),
+            };
+          })));
+        }
+
+        // user query
+        (this.props.page.get('user.where') || []).forEach((where) => {
+          // types
+          const numberTypes = ['gt', 'lt', 'gte', 'lte'];
+
+          // add query
+          query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
+        });
+
+        // check vals
+        const tagFields = [...(this.props.context.fields || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+
+        // get tags
+        const userTags = (this.props.page.get('user.filter.tags') || []).filter((id) => {
+          // return find
+          return tagFields.find((t) => {
+            // check id
+            return (t.options || []).find((o) => o.value === id);
+          });
+        });
+
+        // get filter tags
+        if (userTags.length) {
+          // loop fields
+          query = query[tagFields.length > 1 ? 'or' : 'where'](...(tagFields.map((tagField) => {
+            // return or
+            return {
+              [tagField.name || tagField.uuid] : userTags,
+            };
+          })));
+        }
+
+        // check sort
+        if (this.props.page.get('data.sort.id')) {
+          // get field
+          const sortField = this.props.page.get('data.sort.sort') ? {
+            name : this.props.page.get('data.sort.sort'),
+          } : this.props.context.fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
+
+          // sort by that
+          if (sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
+        }
+
+        // return query
+        return query;
       }
 
       /**
