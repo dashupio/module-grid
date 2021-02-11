@@ -92,7 +92,7 @@
        */
       getForms() {
         // only forms that exist
-        return (this.props.page.get('data.forms') || []).filter((f) => this.props.dashup.page(f));
+        return (this.props.page.get('data.forms') || []).map((f) => this.props.dashup.page(f)).filter((f) => f);
       }
 
       /**
