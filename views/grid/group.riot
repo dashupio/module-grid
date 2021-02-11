@@ -1063,7 +1063,7 @@
        */
       getForms() {
         // get forms
-        if (this.props.page.get('data.forms')) return this.props.page.get('data.forms');
+        if (this.props.page.get('data.forms')) return this.props.page.get('data.forms').filter((f) => f && this.props.dashup.page(f));
         if (this.props.page.get('data.form')) return [this.props.page.get('data.form'), this.props.page.get('data.order.form')].filter((f) => f && this.props.dashup.page(f));
         
         // return any form
