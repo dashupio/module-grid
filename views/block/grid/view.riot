@@ -1,17 +1,18 @@
 <block-grid-view>
-  <div class={ `flex-1 d-flex h-100 w-100${props.block.background ? '' : ' card'}` }>
-    <div if={ props.block.name } class="card-header">
-      { props.block.name }
+  <div class={ `flex-1 d-flex flex-column h-100 w-100${props.block.background ? '' : ' card'}` }>
+    <div if={ props.block.name } class={ props.block.background ? ' mb-2' : 'card-header' }>
+      <b>{ props.block.name }</b>
     </div>
     <div class={ `dashup-grid oy-scroll${props.block.background ? ' flex-1' : ' card-body w-100'}` }>
       <div class="w-100 h-100">
-        <dashup-view view="grid" type="page" struct="grid" model={ getSelectedModel() } fields={ getFields() } get-field={ getField } on-columns={ (columns) => onColumns(columns) } query={ getQuery } columns={ props.block.columns } { ...getProps() } />
+        <dashup-view if={ !loading('grid') } view="grid" type="page" struct="grid" model={ getSelectedModel() } fields={ getFields() } get-field={ getField } on-columns={ (columns) => onColumns(columns) } query={ getQuery } columns={ props.block.columns } { ...getProps() } />
       </div>
     </div>
   </div>
 
   <script>
     // import scrollbar
+    import handlebars from 'handlebars';
     import PerfectScrollbar from 'perfect-scrollbar';
 
     // export default
@@ -23,6 +24,9 @@
       onBeforeMount(...args) {
         // check frontend
         if (typeof window === 'undefined') return;
+
+        // set current
+        this.current = this.props.item || new this.props.dashup.Model();
 
         // bind methods
         this.getField = this.getField.bind(this);
@@ -43,6 +47,27 @@
           this.ps = new PerfectScrollbar(this.$('.oy-scroll'), {
             suppressScrollX : true,
           });
+        }
+      }
+
+      /**
+       * on mounted
+       */
+      onUpdated() {
+        // check frontend
+        if (typeof window === 'undefined') return;
+        
+        // check current
+        if (this.props.item && this.current.get('_id') !== this.props.item.get('_id')) {
+          // set item
+          this.current = this.props.item;
+          this.loading('grid', true);
+          this.loading('grid', false);
+        } else if (!this.props.item && this.current.get('_id')) {
+          // set current
+          this.current = this.props.item || new this.props.dashup.Model();
+          this.loading('grid', true);
+          this.loading('grid', false);
         }
       }
 
@@ -132,6 +157,38 @@
       }
 
       /**
+       * fix context
+       */
+      fixContext(where) {
+        // tempates
+        if (!this.__templates) this.__templates = {};
+
+        // iterate object
+        const iter = (obj) => {
+          // check keys
+          Object.keys(obj).forEach((key) => {
+            // iterate sub
+            if (typeof obj[key] === 'object') return obj[key] = iter(obj[key]);
+
+            // check string
+            if (typeof obj[key] === 'string' && obj[key].includes('{{')) {
+              // log context
+              if (!this.__templates[obj[key]]) this.__templates[obj[key]] = handlebars.compile(obj[key]);
+
+              // key
+              obj[key] = this.__templates[obj[key]](this.props.context);
+            }
+          });
+
+          // return fixed
+          return obj;
+        };
+
+        // iterate object
+        return iter(where);
+      }
+
+      /**
        * get query
        */
       getQuery() {
@@ -151,9 +208,17 @@
         // load filter
         let filter = null;
 
+        // check page filter
+        if (this.props.page.get('data.model') === this.getSelectedModel()) {
+          // try/catch
+          try {
+            filter = JSON.parse(this.props.page.get('data.filter'));
+          } catch (e) {}
+        }
+        
         // try/catch
         try {
-          filter = JSON.parse(this.props.page.get('data.filter'));
+          filter = JSON.parse(this.props.block.filter);
         } catch (e) {}
 
         // add initial where
@@ -161,7 +226,7 @@
           // add wheres
           filter.forEach((where) => {
             // where
-            query = query.where(where);
+            query = query.where(this.fixContext(where));
           });
         }
 
@@ -252,12 +317,22 @@
           this.refs[name] = that;
         };
       }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
     }
   </script>
-
-  <style>
-    .oy-scroll {
-      position : relative;
-    }
-  </style>
 </block-grid-view>

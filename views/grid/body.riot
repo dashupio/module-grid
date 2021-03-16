@@ -110,6 +110,7 @@
        */
       isSelected(item) {
         // check selected
+        if (this.props.isSelected) return this.props.isSelected(item);
         if (!this.props.selected) return;
 
         // check type

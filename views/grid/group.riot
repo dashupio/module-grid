@@ -16,7 +16,7 @@
 
           <div class="grid-column grid-column-add">
             <div class="column-inner">
-              <div if={ props.dashup.can(props.page, 'submit') } class="column-body">
+              <div if={ props.dashup.can(props.page, 'submit') && !props.isSelected } class="column-body">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" value="selected" onchange={ (e) => onSelectAll(e) } />
                 </div>

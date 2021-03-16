@@ -19,7 +19,7 @@
 
     <div class="mb-3" if={ getSelectedModel() }>
       <label class="form-label">
-        Choose Form
+        Choose Form(s)
       </label>
       <eden-select on-change={ (e, val) => onForms(val) } ref={ ref('forms') } placeholder="Select Form" data={ getForms() } multiple={ true } />
       <small>
@@ -183,7 +183,7 @@
         // return value
         return Array.from(this.props.dashup.get('pages').values()).filter((page) => {
           // return model pages
-          return page.get('type') === 'form' && page.get('data.model') === this.props.block.model;
+          return page.get('type') === 'form' && page.get('data.model') === this.getSelectedModel();
         }).map((page) => {
           // return type
           return {
