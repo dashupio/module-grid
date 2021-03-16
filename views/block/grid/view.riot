@@ -1,0 +1,263 @@
+<block-grid-view>
+  <div class={ `flex-1 d-flex h-100 w-100${props.block.background ? '' : ' card'}` }>
+    <div if={ props.block.name } class="card-header">
+      { props.block.name }
+    </div>
+    <div class={ `dashup-grid oy-scroll${props.block.background ? ' flex-1' : ' card-body w-100'}` }>
+      <div class="w-100 h-100">
+        <dashup-view view="grid" type="page" struct="grid" model={ getSelectedModel() } fields={ getFields() } get-field={ getField } on-columns={ (columns) => onColumns(columns) } query={ getQuery } columns={ props.block.columns } { ...getProps() } />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // import scrollbar
+    import PerfectScrollbar from 'perfect-scrollbar';
+
+    // export default
+    export default class BlockGridView {
+
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // check frontend
+        if (typeof window === 'undefined') return;
+
+        // bind methods
+        this.getField = this.getField.bind(this);
+        this.getQuery = this.getQuery.bind(this);
+        this.onColumns = this.onColumns.bind(this);
+      }
+
+      /**
+       * on mounted
+       */
+      onMounted() {
+        // check frontend
+        if (typeof window === 'undefined') return;
+        
+        // fix column sizing
+        if (this.$('.oy-scroll') && !this.$('.oy-scroll.ps')) {
+          // ps
+          this.ps = new PerfectScrollbar(this.$('.oy-scroll'), {
+            suppressScrollX : true,
+          });
+        }
+      }
+
+      /**
+       * on columns
+       */
+      onColumns(columns) {
+        // columns
+        this.props.set('columns', columns);
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // GET METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * get selected model
+       */
+      getSelectedModel() {
+        // check model
+        return this.props.block.model || this.props.model;
+      }
+
+      /**
+       * get selected forms
+       */
+      getSelectedForms() {
+        // forms
+        let forms = this.props.block.forms || [];
+
+        // check form
+        if (!forms.length && this.props.form) forms = [this.props.form];
+        if (!forms.length && this.props.forms) forms = this.props.forms;
+
+        // return forms
+        return forms;
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // clone
+        const newProps = { ...(this.props) };
+
+        // delete
+        delete newProps.type;
+        delete newProps.view;
+        delete newProps.item;
+        delete newProps.class;
+        delete newProps.struct;
+        delete newProps.fields;
+
+        // return
+        return newProps;
+      }
+
+      /**
+       * get field
+       */
+      getField({ type }) {
+        // return field
+        return this.props.fields.find((f) => f.type === type);
+      }
+
+      /**
+       * get fields
+       */
+      getFields() {
+        // get forms
+        const forms = this.getSelectedForms();
+
+        // return fields
+        return Array.from(this.props.dashup.get('pages').values()).filter((page) => {
+          // return model pages
+          return page.get('type') === 'form' && forms.includes(page.get('_id'));
+        }).reduce((accum, page) => {
+          // fields
+          accum.push(...(page.get('data.fields') || []));
+          
+          // return accum
+          return accum;
+        }, []);
+      }
+
+      /**
+       * get query
+       */
+      getQuery() {
+        // set query
+        let query = this.props.dashup.page(this.getSelectedModel());
+
+        // forms
+        const forms = this.getSelectedForms();
+        const fields = this.getFields();
+
+        // check items
+        if (forms.length) {
+          // loop forms
+          query = query.in('_meta.form', forms);
+        }
+
+        // load filter
+        let filter = null;
+
+        // try/catch
+        try {
+          filter = JSON.parse(this.props.page.get('data.filter'));
+        } catch (e) {}
+
+        // add initial where
+        if (filter) {
+          // add wheres
+          filter.forEach((where) => {
+            // where
+            query = query.where(where);
+          });
+        }
+
+        // search
+        if (this.props.search && this.props.search.length) {
+          // add search
+          query = query.search(this.props.search);
+        }
+
+        // test by user
+        if ((this.props.page.get('user.filter') || {}).me) {
+          // get user fields
+          const userFields = [...(fields || [])].filter((f) => (this.props.page.get('data.user') || []).includes(f.uuid));
+          
+          // loop fields
+          query = query[userFields.length > 1 ? 'or' : 'where'](...(userFields.map((userField) => {
+            // return or
+            return {
+              [userField.name || userField.uuid] : this.props.dashup.get('_meta.member'),
+            };
+          })));
+        }
+
+        // user query
+        (this.props.page.get('user.where') || []).forEach((where) => {
+          // types
+          const numberTypes = ['gt', 'lt', 'gte', 'lte'];
+
+          // add query
+          query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
+        });
+
+        // check vals
+        const tagFields = [...(fields || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+
+        // get tags
+        const userTags = (this.props.page.get('user.filter.tags') || []).filter((id) => {
+          // return find
+          return tagFields.find((t) => {
+            // check id
+            return (t.options || []).find((o) => o.value === id);
+          });
+        });
+
+        // get filter tags
+        if (userTags.length) {
+          // loop fields
+          query = query[tagFields.length > 1 ? 'or' : 'where'](...(tagFields.map((tagField) => {
+            // return or
+            return {
+              [tagField.name || tagField.uuid] : userTags,
+            };
+          })));
+        }
+
+        // check sort
+        if (this.props.page.get('data.sort.id')) {
+          // get field
+          const sortField = this.props.page.get('data.sort.sort') ? {
+            name : this.props.page.get('data.sort.sort'),
+          } : fields.find((f) => f.uuid === this.props.page.get('data.sort.id'));
+
+          // sort by that
+          if (sortField) query = query.sort(sortField.name || sortField.uuid, this.props.page.get('data.sort.way'));
+        }
+ 
+        // return query
+        return query;
+      }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+    }
+  </script>
+
+  <style>
+    .oy-scroll {
+      position : relative;
+    }
+  </style>
+</block-grid-view>

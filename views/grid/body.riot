@@ -20,7 +20,7 @@
       </div>
 
       <div class="grid-column-scroll">
-        <div each={ (column, i) in props.page.get('data.columns') } class={ classes({ 'grid-field' : true, 'active' : false }) } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
+        <div each={ (column, i) in getColumns() } class={ classes({ 'grid-field' : true, 'active' : false }) } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
           <grid-column i={ i } class="field-inner" column={ column } item={ item } { ...props } />
         </div>
       </div>
@@ -116,6 +116,31 @@
         if (this.props.selected.type === 'all') return true;
         if (this.props.selected.type === 'items') return this.props.selected.items.includes(item.get('_id'));
         if (this.props.selected.type === 'all-minus') return !this.props.selected.items.includes(item.get('_id'));
+      }
+
+      /**
+       * get columns
+       */
+      getColumns () {
+        // return
+        return this.getAvailableColumns().sort((a, b) => {
+          // a or b
+          const aC = a.order || 0;
+          const bC = b.order || 0;
+
+          // check order
+          if (bC > aC) return -1;
+          if (bC < aC) return 1;
+          return 0;
+        });
+      }
+
+      /**
+       * get available columns
+       */
+      getAvailableColumns() {
+        // get columns
+        return (this.props.onColumns ? this.props.columns : this.props.page.get('data.columns')) || [];
       }
 
       // ////////////////////////////////////////////////////////////////////////////

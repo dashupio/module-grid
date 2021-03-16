@@ -123,7 +123,7 @@
               </div>
 
               <div class="grid-column-scroll">
-                <div each={ (column, i) in props.page.get('data.columns') } class={ classes({ 'grid-field' : true, 'active' : false }) } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
+                <div each={ (column, i) in getAvailableColumns() } class={ classes({ 'grid-field' : true, 'active' : false }) } style={ `flex-basis:${column.basis}%;max-width:${column.basis}%` }>
                   <grid-column if={ column.field !== 'custom' } i={ i } class="field-inner" column={ column } item={ empty } on-edit={ (e, i, el) => props.onEdit(e, i, el, getBulk()) } { ...getProps(true) } />
                 </div>
               </div>
@@ -614,7 +614,7 @@
         e.stopPropagation();
 
         // get page
-        const columns = this.props.page.get('data.columns') || [];
+        const columns = this.getAvailableColumns();
 
         // push column
         columns.push({
@@ -626,7 +626,7 @@
         this.initBasis(columns);
         
         // set model
-        await this.props.data('columns', columns);
+        await this.saveColumns(columns);
       }
 
       /**
@@ -638,7 +638,7 @@
         e.stopPropagation();
 
         // get page
-        const columns = this.props.page.get('data.columns') || [];
+        const columns = this.getAvailableColumns();
         const column = {
           id    : uuid(),
           title : 'Custom Label',
@@ -651,7 +651,7 @@
         this.initBasis(columns);
         
         // set model
-        await this.props.data('columns', columns);
+        await this.saveColumns(columns);
 
         // on column view
         this.onUpdateColumn(e, column);
@@ -662,7 +662,7 @@
        */
       onColumnView(val) {
         // set val
-        const columns = this.props.page.get('data.columns') || [];
+        const columns = this.getAvailableColumns();
 
         // get column
         const column = columns.find((c) => c.id === this.state.updating.id);
@@ -672,7 +672,7 @@
         this.state.updating.view = val;
 
         // update
-        this.props.data('columns', columns);
+        this.saveColumns(columns);
       }
 
       /**
@@ -680,7 +680,7 @@
        */
       onColumnTitle(e) {
         // set val
-        const columns = this.props.page.get('data.columns') || [];
+        const columns = this.getAvailableColumns();
 
         // get column
         const column = columns.find((c) => c.id === this.state.updating.id);
@@ -690,7 +690,7 @@
         this.state.updating.title = e.target.value;
 
         // update
-        this.props.data('columns', columns);
+        this.saveColumns(columns);
       }
 
       /**
@@ -698,7 +698,7 @@
        */
       onColumnSort(e) {
         // set val
-        const columns = this.props.page.get('data.columns') || [];
+        const columns = this.getAvailableColumns();
 
         // get column
         const column = columns.find((c) => c.id === this.state.updating.id);
@@ -708,7 +708,7 @@
         this.state.updating.sort = e.target.value;
 
         // update
-        this.props.data('columns', columns);
+        this.saveColumns(columns);
       }
 
       /**
@@ -759,7 +759,7 @@
         });
 
         // on data
-        this.props.data('columns', this.props.page.get('data.columns') || []);
+        this.saveColumns(this.getAvailableColumns());
       }
 
       /**
@@ -829,14 +829,14 @@
         });
 
         // get page
-        const columns = (this.props.page.get('data.columns') || []).filter((col) => {
+        const columns = this.getAvailableColumns().filter((col) => {
           // check column
           return col.id !== column.id;
         });
         this.initBasis(columns);
 
         // on data
-        this.props.data('columns', columns);
+        this.saveColumns(columns);
       }
 
 
@@ -1019,11 +1019,25 @@
       // ////////////////////////////////////////////////////////////////////////////
 
       /**
+       * save columns
+       */
+      saveColumns(columns) {
+        // check column save method
+        if (this.props.onColumns) {
+          // save via props
+          return this.props.onColumns(columns);
+        } else {
+          // save on page
+          return this.props.data('columns', columns);
+        }
+      }
+
+      /**
        * get columns
        */
       getColumns () {
         // return
-        return (this.props.page.get('data.columns') || []).sort((a, b) => {
+        return this.getAvailableColumns().sort((a, b) => {
           // a or b
           const aC = a.order || 0;
           const bC = b.order || 0;
@@ -1033,6 +1047,14 @@
           if (bC < aC) return 1;
           return 0;
         });
+      }
+
+      /**
+       * get available columns
+       */
+      getAvailableColumns() {
+        // get columns
+        return (this.props.onColumns ? this.props.columns : this.props.page.get('data.columns')) || [];
       }
 
       /**
@@ -1344,7 +1366,7 @@
 
             onEnd : async (e) => {
               // columns
-              const columns = this.props.page.get('data.columns') || [];
+              const columns = this.getAvailableColumns();
 
               // update columns
               this.$$('.grid-header .grid-column-scroll > .grid-column').forEach((item, i) => {
@@ -1360,7 +1382,9 @@
 
               // loading columns
               this.loading('columns', true);
-              this.props.data('columns', columns);
+
+              // save columns
+              this.saveColumns(columns);
 
               // timeout
               setTimeout(() => {
@@ -1377,10 +1401,10 @@
        */
       initBasis(columns) {
         // set columns
-        if (!columns) columns = this.props.page.get('data.columns') || [];
+        if (!columns) columns = this.getAvailableColumns();
 
         // min width
-        const maxW = 100 - (((this.props.page.get('data.columns') || []).length - 1) * this.minW);
+        const maxW = 100 - ((this.getAvailableColumns().length - 1) * this.minW);
 
         // check columns
         columns.forEach((col) => {
@@ -1432,8 +1456,8 @@
 
         // get attribute
         const i    = parseInt($(e.target).closest('[data-column]').attr('data-column'));
-        const col  = this.props.page.get(`data.columns.${i}`);
-        const maxW = 100 - (((this.props.page.get('data.columns') || []).length - 1) * this.minW);
+        const col  = this.getAvailableColumns()[i];
+        const maxW = 100 - ((this.getAvailableColumns().length - 1) * this.minW);
 
         // return
         if (!col) return;
@@ -1463,7 +1487,7 @@
           change = (parseFloat(((changeX / width) * 100).toFixed(2)) || 0) * -1;
 
           // no change
-          if (i === ((this.props.page.get('data.columns') || []).length - 1) && change < 0) change = 0;
+          if (i === (this.getAvailableColumns().length - 1) && change < 0) change = 0;
 
           // create new basis
           let newB = parseFloat((origB + change > maxW ? maxW : origB + change).toFixed(2));
@@ -1472,7 +1496,7 @@
           // current remove
           let currentR = newB - origB;
           let currentI = i + 1;
-          let currentP = this.props.page.get(`data.columns.${currentI}`);
+          let currentP = this.getAvailableColumns()[currentI];
 
           // remove max evenly from next column in order
           while (currentP && currentR != 0) {
@@ -1489,7 +1513,7 @@
             // remove from current R
             currentR = currentR - (currentP.basis - nextB);
             currentI = currentI + 1;
-            currentP = this.props.page.get(`data.columns.${currentI}`);
+            currentP = this.getAvailableColumns()[currentI];
           }
 
           // update basis
@@ -1512,7 +1536,7 @@
           // current remove
           let currentR = newB - origB;
           let currentI = i + 1;
-          let currentP = this.props.page.get(`data.columns.${currentI}`);
+          let currentP = this.getAvailableColumns()[currentI];
 
           // remove max evenly from next column in order
           while (currentP && currentR != 0) {
@@ -1528,14 +1552,14 @@
 
             // next
             currentI = currentI + 1;
-            currentP = this.props.page.get(`data.columns.${currentI}`);
+            currentP = this.getAvailableColumns()[currentI];
           }
 
           // set full new basis
           col.basis = newB - currentR;
 
           // update
-          this.props.data('columns', this.props.page.get('data.columns'));
+          this.saveColumns(this.getAvailableColumns());
 
           // moving
           $('.column-moving').removeClass('column-moving');

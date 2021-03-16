@@ -3,6 +3,7 @@ const { Module } = require('@dashup/module');
 
 // import base
 const GridPage = require('./pages/grid');
+const GridBlock = require('./blocks/grid');
 
 /**
  * export module
@@ -23,8 +24,11 @@ class GridModule extends Module {
    * @param {*} register 
    */
   register(fn) {
-    // register sms action
+    // register grid page
     fn('page', GridPage);
+
+    // register grid block
+    fn('block', GridBlock);
   }
 }
 
