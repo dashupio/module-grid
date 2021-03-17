@@ -12,11 +12,21 @@
 
     <div class="mb-3" if={ props.page.get('data.model') }>
       <label class="form-label">
-        Choose Form
+        Choose Form(s)
       </label>
       <eden-select on-change={ (e, val) => onForms(val) } ref={ ref('forms') } placeholder="Select Form" data={ getForms() } multiple={ true } />
       <small>
         The forms that this grid will filter by.
+      </small>
+    </div>
+
+    <div class="mb-3" if={ props.page.get('data.model') }>
+      <label class="form-label">
+        Choose Dashboard(s)
+      </label>
+      <eden-select on-change={ (e, val) => onDashboards(val) } ref={ ref('dashboards') } placeholder="Select Dashboard" data={ getDashboards() } multiple={ true } />
+      <small>
+        View Dashboards with this grids items.
       </small>
     </div>
 
@@ -134,6 +144,19 @@
       /**
        * on model
        */
+      onDashboards(vals) {
+         // forms
+        if (!vals) vals = this.refs.dashboards.val();
+        if (!vals) vals = [];
+        if (!Array.isArray(vals)) vals = [vals];
+
+        // set model
+        this.props.data('dashboards', vals);
+      }
+
+      /**
+       * on model
+       */
       onTag(val) {
         // get value
         if (!val) val = this.refs.tag.val();
@@ -208,6 +231,24 @@
             name     : page.get('name'),
             value    : page.get('_id'),
             selected : (this.props.page.get('data.forms') || []).includes(page.get('_id')),
+          };
+        });
+      }
+
+      /**
+       * get value
+       */
+      getDashboards() {
+        // return value
+        return Array.from(this.props.dashup.get('pages').values()).filter((page) => {
+          // return model pages
+          return page.get('type') === 'dashboard' && page.get('data.model') === this.props.page.get('data.model');
+        }).map((page) => {
+          // return type
+          return {
+            name     : page.get('name'),
+            value    : page.get('_id'),
+            selected : (this.props.page.get('data.dashboards') || []).includes(page.get('_id')),
           };
         });
       }

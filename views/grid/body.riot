@@ -39,8 +39,12 @@
             <div class="dropdown-menu dropdown-menu-right p-0">
               <div class="card p-2">
                 <nav class="nav flex-column">
-                  <a each={ (form, i) in props.forms } href={ `/app/${form}/${item.get('_id')}` } class="nav-link">
-                    Update: { props.dashup.page(form).get('name') }
+                  <a each={ (id, i) in props.forms } href={ `/app/${id}/${item.get('_id')}` } class="nav-link">
+                    Update: { props.dashup.page(id).get('name') }
+                  </a>
+                  <hr if={ props.dashboards.length } />
+                  <a each={ (id, i) in props.dashboards } href={ `/app/${id}/${item.get('_id')}` } class="nav-link">
+                    View: { props.dashup.page(id).get('name') }
                   </a>
                   <hr />
                   <a href={ `/app/${props.forms[0]}/${item.get('_id')}/remove?redirect=${window.location.href}` } class="nav-link text-danger">

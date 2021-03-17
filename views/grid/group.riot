@@ -104,7 +104,7 @@
         <!-- / GRID HEADER -->
 
         <!-- GRID BODY -->
-        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } loading={ loading } { ...getProps() } />
+        <grid-body ref={ ref('body') } items={ state.items } forms={ getForms() } dashboards={ getDashboards() } on-select={ (item, way) => onSelect(item, way) } selected={ state.selected } sort={ state.sort } loading={ loading } { ...getProps() } />
         <!-- / GRID BODY -->
 
         <!-- BULK ACTION -->
@@ -1092,6 +1092,20 @@
         return Array.from(this.props.dashup.get('pages').values()).filter((v) => {
           // return forms
           return v.get('type') === 'form' && v.get('data.model') === (this.props.page.get('data.model') || this.props.page.get('_id'));
+        }).map((p) => p.get('_id'));
+      }
+
+      /**
+       * get forms
+       */
+      getDashboards() {
+        // get forms
+        if (this.props.page.get('data.dashboards')) return this.props.page.get('data.dashboards').filter((f) => f && this.props.dashup.page(f));
+        
+        // return any form
+        return Array.from(this.props.dashup.get('pages').values()).filter((v) => {
+          // return forms
+          return v.get('type') === 'dashboard' && v.get('data.model') === (this.props.page.get('data.model') || this.props.page.get('_id'));
         }).map((p) => p.get('_id'));
       }
 
