@@ -88,6 +88,15 @@
                         { column.label }
                       </a>
                       <hr />
+                      <a href="#!" class="nav-link" onclick={ (e) => onAddMeta(e, 'Created At', '{{date _meta.created_at}}') }>
+                        <i class="fa fa-calendar-day mr-2" />
+                        Created At
+                      </a>
+                      <a href="#!" class="nav-link" onclick={ (e) => onAddMeta(e, 'Updated At', '{{date _meta.updated_at}}') }>
+                        <i class="fa fa-calendar-alt mr-2" />
+                        Updated At
+                      </a>
+                      <hr />
                       <a href="#!" class="nav-link" onclick={ (e) => onAddCustom(e) }>
                         <i class="fa fa-function mr-2" />
                         Custom
@@ -623,6 +632,32 @@
           field : column.uuid,
           order : columns.length + 1
         });
+        this.initBasis(columns);
+        
+        // set model
+        await this.saveColumns(columns);
+      }
+
+      /**
+       * on add custom
+       */
+      async onAddMeta(e, title, view) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+
+        // get page
+        const columns = this.getAvailableColumns();
+        const column = {
+          view,
+          title,
+          id    : uuid(),
+          field : 'custom',
+          order : columns.length + 1
+        };
+
+        // push column
+        columns.push(column);
         this.initBasis(columns);
         
         // set model
