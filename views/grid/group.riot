@@ -88,11 +88,11 @@
                         { column.label }
                       </a>
                       <hr />
-                      <a href="#!" class="nav-link" onclick={ (e) => onAddMeta(e, 'Created At', '{{date _meta.created_at}}') }>
+                      <a href="#!" class="nav-link" onclick={ (e) => onAddMeta(e, 'Created At', 'created_at', '{{date _meta.created_at}}') }>
                         <i class="fa fa-calendar-day mr-2" />
                         Created At
                       </a>
-                      <a href="#!" class="nav-link" onclick={ (e) => onAddMeta(e, 'Updated At', '{{date _meta.updated_at}}') }>
+                      <a href="#!" class="nav-link" onclick={ (e) => onAddMeta(e, 'Updated At', 'updated_at', '{{date _meta.updated_at}}') }>
                         <i class="fa fa-calendar-alt mr-2" />
                         Updated At
                       </a>
@@ -641,7 +641,7 @@
       /**
        * on add custom
        */
-      async onAddMeta(e, title, view) {
+      async onAddMeta(e, title, sort, view) {
         // prevent
         e.preventDefault();
         e.stopPropagation();
@@ -652,6 +652,7 @@
           view,
           title,
           id    : uuid(),
+          sort  : sort,
           field : 'custom',
           order : columns.length + 1
         };
