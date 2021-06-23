@@ -28,7 +28,7 @@ export default class GridPage extends Struct {
    */
   get title() {
     // return page type label
-    return 'Grid Page';
+    return 'Grid View';
   }
 
   /**
@@ -45,12 +45,8 @@ export default class GridPage extends Struct {
   get views() {
     // return object of views
     return {
-      grid   : 'grid',
-      
-      view   : 'page/grid/view',
-      menu   : 'page/grid/menu',
+      view   : 'page/grid',
       config : 'page/grid/config',
-      filter : 'page/grid/filter',
     };
   }
 
@@ -67,6 +63,6 @@ export default class GridPage extends Struct {
    */
   get description() {
     // return description string
-    return 'Grid view page';
+    return 'Grid View';
   }
 }

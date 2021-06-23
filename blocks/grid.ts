@@ -45,7 +45,7 @@ export default class GridBlock extends Struct {
   get views() {
     // return object of views
     return {
-      view   : 'block/grid/view',
+      view   : 'block/grid',
       config : 'block/grid/config',
     };
   }
