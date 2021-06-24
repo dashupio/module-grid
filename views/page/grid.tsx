@@ -8,16 +8,19 @@ import React, { useState, useEffect } from 'react';
 const PageGrid = (props = {}) => {
   // groups
   const [skip, setSkip] = useState(0);
+  const [form, setForm] = useState(null);
+  const [share, setShare] = useState(false);
   const [total, setTotal] = useState(0);
   const [groups, setGroups] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [reload, setReload] = useState(new Date());
   const [config, setConfig] = useState(false);
   const [prevent, setPrevent] = useState(false);
   const [updated, setUpdated] = useState(new Date());
   const [selected, setSelected] = useState({ type : 'items', items : [] });
 
   // required
-  const required = [{
+  const required = typeof props.required !== 'undefined' ? props.required : [{
     key   : 'data.model',
     label : 'Model',
   }, {
@@ -118,22 +121,74 @@ const PageGrid = (props = {}) => {
     };
   };
 
+  // save item
+  const saveItem = async (item) => {
+    // set saving
+    setSaving(true);
+
+    // save
+    await item.save();
+
+    // set saving
+    setSaving(false);
+  };
+
+  // save bulk
+  const saveBulk = async (item, field) => {
+    // set saving
+    setSaving(true);
+
+    // do bulk update
+    await props.dashup.rpc({
+      page   : props.page.get('_id'),
+      form   : props.getForms()[0].get('_id'),
+      model  : props.getModels()[0].get('_id'),
+      dashup : props.dashup.get('_id'),
+    }, 'model.bulk', {
+      by    : selected.type,
+      type  : 'update',
+      items : selected.items,
+      query : props.getQuery().query,
+    }, {
+      [field.name || field.uuid] : item.toJSON()[field.name || field.uuid],
+    });
+
+    // set to page
+    setSaving(false);
+    setReload(new Date());
+  };
+
+  // save bulk
+  const removeBulk = async () => {
+    // set saving
+    setSaving(true);
+
+    // do bulk update
+    await props.dashup.rpc({
+      page   : props.page.get('_id'),
+      form   : props.getForms()[0].get('_id'),
+      model  : props.getModels()[0].get('_id'),
+      dashup : props.dashup.get('_id'),
+    }, 'model.bulk', {
+      by    : selected.type,
+      type  : 'remove',
+      items : selected.items,
+      query : props.getQuery().query,
+    });
+
+    // set to page
+    setSaving(false);
+    setReload(new Date());
+    setSelected({
+      type  : 'items',
+      items : [],
+    });
+  };
+
   // render field
-  const renderField = (item, column) => {
+  const renderField = (item, column, bulk = false) => {
     // find field
     const field = props.getField(column.field);
-
-    // save item
-    const saveItem = async () => {
-      // set saving
-      setSaving(true);
-
-      // save
-      await item.save();
-
-      // set saving
-      setSaving(false);
-    };
 
     // check if custom
     if (column.field === 'custom') return (
@@ -163,8 +218,14 @@ const PageGrid = (props = {}) => {
                 <i className="fa fa-spinner fa-spin" />
               </div>
             </View>
-            <Button variant="primary" disabled={ saving || prevent } className="w-100" onClick={ (e) => saveItem() }>
-              { prevent ? 'Uploading...' : (saving ? 'Saving...' : 'Submit') }
+            <Button variant="primary" disabled={ saving || prevent } className="w-100" onClick={ (e) => bulk ? saveBulk(item, field) : saveItem(item) }>
+              { prevent ? 'Uploading...' : (
+                saving ? 'Saving...' : (
+                  bulk ? 
+                  `Update ${(bulk?.total || 0).toLocaleString()} items` :
+                  'Submit'
+                )
+              ) }
             </Button>
           </div>
         </Popover>
@@ -191,11 +252,15 @@ const PageGrid = (props = {}) => {
 
   // set actions
   const actions = [
-    ...(props.getForms().map((form) => {
+    ...(props.getForms().map((f) => {
       return {
-        id      : form.get('_id'),
-        icon    : form.get('icon'),
-        content : form.get('name'),
+        id      : f.get('_id'),
+        icon    : f.get('icon'),
+        content : f.get('name'),
+        onClick : (item) => {
+          setForm(f.get('_id'));
+          props.setItem(item);
+        },
       };
     })),
 
@@ -240,8 +305,9 @@ const PageGrid = (props = {}) => {
 
     // check field
     if (
-      (column.field !== 'custom' && column.field === props.page.get('data.sort.field')) ||
-      (column.field === 'custom' && column.sort === props.page.get('data.sort.sort'))
+      column && props.page.get('data.sort') &&
+      ((column.field !== 'custom' && column.field === props.page.get('data.sort.field')) ||
+      (column.field === 'custom' && column.sort === props.page.get('data.sort.sort')))
     ) {
       // reverse sort
       if (props.page.get('data.sort.way') === -1) {
@@ -400,9 +466,11 @@ const PageGrid = (props = {}) => {
   return (
     <Page { ...props } require={ required } bodyClass="flex-column">
 
+      <Page.Share show={ share } onHide={ (e) => setShare(false) } />
+      { !!props.item && <Page.Item show item={ props.item } form={ form } setItem={ props.setItem } onHide={ (e) => props.setItem(null) } /> }
       <Page.Config show={ config } onHide={ (e) => setConfig(false) } />
 
-      <Page.Menu onConfig={ () => setConfig(true) } onShare>
+      <Page.Menu onConfig={ () => setConfig(true) } presence={ props.presence } onShare={ () => setShare(true) }>
         <>
           { !props.page.get('data.group') && (
             <Dropdown>
@@ -439,7 +507,7 @@ const PageGrid = (props = {}) => {
 
                   // return jsx
                   return (
-                    <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => props.setData('limit', 25) }>
+                    <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => !setForm(form.get('_id')) && props.setItem(new props.dashup.Model()) }>
                       <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
                       { form.get('name') }
                     </Dropdown.Item>
@@ -466,6 +534,7 @@ const PageGrid = (props = {}) => {
                     sort={ props.page.get('data.sort') || {} }
                     limit={ props.page.get('data.limit') || 25 }
                     saving={ saving }
+                    reload={ reload }
                     columns={ props.page.get('data.columns') || [] }
                     className="w-100"
                     available={ props.getFields() }
@@ -480,9 +549,15 @@ const PageGrid = (props = {}) => {
                     setLimit={ setLimit }
                     setColumns={ setColumns }
                     renderField={ renderField }
+                    onRemoveBulk={ removeBulk }
                   >
                     <Grid.Group
                       label={ group.label }
+                      saving={ saving }
+                      display={ props.display }
+                      onClick={ props.noColumns ? props.setItem : null }
+                      bulkItem={ new props.dashup.Model() }
+                      noColumns={ props.noColumns }
                     />
                   </Grid>
                 );
@@ -494,6 +569,8 @@ const PageGrid = (props = {}) => {
               skip={ skip }
               sort={ props.page.get('data.sort') || {} }
               limit={ props.page.get('data.limit') || 25 }
+              saving={ saving }
+              reload={ reload }
               columns={ props.page.get('data.columns') || [] }
               available={ props.getFields() }
 
@@ -508,10 +585,16 @@ const PageGrid = (props = {}) => {
               setLimit={ setLimit }
               setColumns={ setColumns }
               renderField={ renderField }
+              onRemoveBulk={ removeBulk }
             >
               <Grid.Group
+                saving={ saving }
+                display={ props.display }
+                onClick={ props.noColumns ? props.setItem : null }
+                bulkItem={ new props.dashup.Model() }
                 onSelect={ onSelect }
                 selected={ selected }
+                noColumns={ props.noColumns }
                 isSelected={ isSelected }
               />
             </Grid>

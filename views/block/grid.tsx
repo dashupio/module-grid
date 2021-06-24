@@ -150,9 +150,23 @@ const BlockGrid = (props = {}) => {
   ];
 
   // set sort
-  const setSort = async (column, way) => {
+  const setSort = async (column, way = 1) => {
     // let sort
     let sort;
+
+    // check field
+    if (
+      column && props.block.sort &&
+      ((column.field !== 'custom' && column.field === props.block.sort?.field) ||
+      (column.field === 'custom' && column.sort === props.block.sort?.sort))
+    ) {
+      // reverse sort
+      if (props.page.get('data.sort.way') === -1) {
+        column = null;
+      } else {
+        way = -1;
+      }
+    }
     
     // set sort
     if (!column) {
@@ -168,14 +182,8 @@ const BlockGrid = (props = {}) => {
       };
     }
 
-    // set loading
-    setLoading(true);
-
     // set data
     await props.setBlock(props.block, 'sort', sort);
-
-    // set loading
-    setLoading(false);
   };
 
   // set columns
