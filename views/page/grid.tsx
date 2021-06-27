@@ -197,6 +197,15 @@ const PageGrid = (props = {}) => {
       </div>
     );
 
+    // on save
+    const onSave = async () => {
+      // await save
+      await bulk ? saveBulk(item, field) : saveItem(item);
+
+      // close
+      if (typeof document?.body?.click === 'function') document.body.click();
+    };
+
     // return no field
     return field && (
       <OverlayTrigger trigger="click" placement="bottom-start" className="grid-column-content" rootClose overlay={ (
@@ -218,7 +227,7 @@ const PageGrid = (props = {}) => {
                 <i className="fa fa-spinner fa-spin" />
               </div>
             </View>
-            <Button variant="primary" disabled={ saving || prevent } className="w-100" onClick={ (e) => bulk ? saveBulk(item, field) : saveItem(item) }>
+            <Button variant="primary" disabled={ saving || prevent } className="w-100" onClick={ (e) => onSave() }>
               { prevent ? 'Uploading...' : (
                 saving ? 'Saving...' : (
                   bulk ? 
@@ -496,25 +505,32 @@ const PageGrid = (props = {}) => {
             </Dropdown>
           ) }
           { props.dashup.can(props.page, 'submit') && !!props.getForms().length && (
-            <Dropdown>
-              <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
-                <i className="fat fa-plus me-2" />
-                Create
-              </Dropdown.Toggle>
-
-              <Dropdown.Menu>
-                { props.getForms().map((form) => {
-
-                  // return jsx
-                  return (
-                    <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => !setForm(form.get('_id')) && props.setItem(new props.dashup.Model()) }>
-                      <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
-                      { form.get('name') }
-                    </Dropdown.Item>
-                  );
-                }) }
-              </Dropdown.Menu>
-            </Dropdown>
+            props.getForms().length > 1 ? (
+              <Dropdown>
+                <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
+                  <i className="fat fa-plus me-2" />
+                  Create
+                </Dropdown.Toggle>
+  
+                <Dropdown.Menu>
+                  { props.getForms().map((form) => {
+  
+                    // return jsx
+                    return (
+                      <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => !setForm(form.get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }>
+                        <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
+                        { form.get('name') }
+                      </Dropdown.Item>
+                    );
+                  }) }
+                </Dropdown.Menu>
+              </Dropdown>
+            ) : (
+              <button className="btn btn-primary me-2" onClick={ (e) => !setForm(props.getForms()[0].get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }>
+                <i className={ `me-2 fa-${props.getForms()[0].get('icon') || 'pencil fas'}` } />
+                { props.getForms()[0].get('name') }
+              </button>
+            )
           ) }
         </>
       </Page.Menu>
@@ -535,6 +551,8 @@ const PageGrid = (props = {}) => {
                     limit={ props.page.get('data.limit') || 25 }
                     saving={ saving }
                     reload={ reload }
+                    dashup={ props.dashup }
+                    updated={ updated }
                     columns={ props.page.get('data.columns') || [] }
                     className="w-100"
                     available={ props.getFields() }
@@ -556,7 +574,7 @@ const PageGrid = (props = {}) => {
                       saving={ saving }
                       display={ props.display }
                       onClick={ props.noColumns ? props.setItem : null }
-                      bulkItem={ new props.dashup.Model() }
+                      bulkItem={ new props.dashup.Model({}, props.dashup) }
                       noColumns={ props.noColumns }
                     />
                   </Grid>
@@ -571,6 +589,8 @@ const PageGrid = (props = {}) => {
               limit={ props.page.get('data.limit') || 25 }
               saving={ saving }
               reload={ reload }
+              dashup={ props.dashup }
+              updated={ updated }
               columns={ props.page.get('data.columns') || [] }
               available={ props.getFields() }
 
@@ -591,7 +611,7 @@ const PageGrid = (props = {}) => {
                 saving={ saving }
                 display={ props.display }
                 onClick={ props.noColumns ? props.setItem : null }
-                bulkItem={ new props.dashup.Model() }
+                bulkItem={ new props.dashup.Model({}, props.dashup) }
                 onSelect={ onSelect }
                 selected={ selected }
                 noColumns={ props.noColumns }

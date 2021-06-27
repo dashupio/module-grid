@@ -11,7 +11,7 @@ const BlockGridConfig = (props = {}) => {
     // get forms
     const forms = Array.from(props.dashup.get('pages').values()).filter((page) => {
       // return model pages
-      return page.get('type') === 'model';
+      return page.get('type') === 'model' && !page.get('archived');
     });
 
     // return mapped
@@ -31,7 +31,7 @@ const BlockGridConfig = (props = {}) => {
     // get forms
     const forms = Array.from(props.dashup.get('pages').values()).filter((page) => {
       // return model pages
-      return page.get('type') === 'form' && page.get('data.model') === (props.model || props.block.model);
+      return page.get('type') === 'form' && page.get('data.model') === (props.model || props.block.model) && !page.get('archived');
     });
 
     // return mapped
