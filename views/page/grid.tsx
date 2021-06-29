@@ -1,8 +1,9 @@
 
 // import dependencies
-import { Dropdown, OverlayTrigger, Popover, Button } from 'react-bootstrap';
+import PerfectScrollbar from 'react-perfect-scrollbar';
 import { Page, Grid, View, Hbs } from '@dashup/ui';
 import React, { useState, useEffect } from 'react';
+import { Dropdown, OverlayTrigger, Popover, Button } from 'react-bootstrap';
 
 // create gallery page
 const PageGrid = (props = {}) => {
@@ -537,88 +538,89 @@ const PageGrid = (props = {}) => {
       <Page.Filter onSearch={ setSearch } onSort={ setSort } onTag={ setTag } onFilter={ setFilter } isString />
       { !required.find((r) => !props.page.get(r.key)) && (
         <Page.Body>
-          
-          { groups && groups.length ? (
-            <div className="d-flex flex-column w-100">
-              { groups.map((group) => {
-                // return jsx
-                return (
-                  <Grid
-                    id={ props.page.get('_id') }
-                    key={ `group-${group.id || group.label}` }
-                    skip={ skip }
-                    sort={ props.page.get('data.sort') || {} }
-                    limit={ props.page.get('data.limit') || 25 }
-                    saving={ saving }
-                    reload={ reload }
-                    dashup={ props.dashup }
-                    updated={ updated }
-                    columns={ props.page.get('data.columns') || [] }
-                    className="w-100"
-                    available={ props.getFields() }
-
-                    canAlter={ props.dashup.can(props.page, 'alter') }
-                    canSubmit={ props.dashup.can(props.page, 'submit') }
-
-                    setSort={ setSort }
-                    setSkip={ setSkip }
-                    actions={ actions }
-                    loadData={ () => loadData(group) }
-                    setLimit={ setLimit }
-                    setColumns={ setColumns }
-                    renderField={ renderField }
-                    onRemoveBulk={ removeBulk }
-                  >
-                    <Grid.Group
-                      label={ group.label }
+          <PerfectScrollbar className="d-flex flex-1 p-relative">
+            { groups && groups.length ? (
+              <div className="d-flex flex-column w-100">
+                { groups.map((group) => {
+                  // return jsx
+                  return (
+                    <Grid
+                      id={ props.page.get('_id') }
+                      key={ `group-${group.id || group.label}` }
+                      skip={ skip }
+                      sort={ props.page.get('data.sort') || {} }
+                      limit={ props.page.get('data.limit') || 25 }
                       saving={ saving }
-                      display={ props.display }
-                      onClick={ props.noColumns ? props.setItem : null }
-                      bulkItem={ new props.dashup.Model({}, props.dashup) }
-                      noColumns={ props.noColumns }
-                    />
-                  </Grid>
-                );
-              }) }
-            </div>
-          ) : (
-            <Grid
-              id={ props.page.get('_id') }
-              skip={ skip }
-              sort={ props.page.get('data.sort') || {} }
-              limit={ props.page.get('data.limit') || 25 }
-              saving={ saving }
-              reload={ reload }
-              dashup={ props.dashup }
-              updated={ updated }
-              columns={ props.page.get('data.columns') || [] }
-              available={ props.getFields() }
+                      reload={ reload }
+                      dashup={ props.dashup }
+                      updated={ updated }
+                      columns={ props.page.get('data.columns') || [] }
+                      className="w-100"
+                      available={ props.getFields() }
 
-              canAlter={ props.dashup.can(props.page, 'alter') }
-              canSubmit={ props.dashup.can(props.page, 'submit') }
-              fullHeight
+                      canAlter={ props.dashup.can(props.page, 'alter') }
+                      canSubmit={ props.dashup.can(props.page, 'submit') }
 
-              setSort={ setSort }
-              setSkip={ setSkip }
-              actions={ actions }
-              loadData={ loadData }
-              setLimit={ setLimit }
-              setColumns={ setColumns }
-              renderField={ renderField }
-              onRemoveBulk={ removeBulk }
-            >
-              <Grid.Group
+                      setSort={ setSort }
+                      setSkip={ setSkip }
+                      actions={ actions }
+                      loadData={ () => loadData(group) }
+                      setLimit={ setLimit }
+                      setColumns={ setColumns }
+                      renderField={ renderField }
+                      onRemoveBulk={ removeBulk }
+                    >
+                      <Grid.Group
+                        label={ group.label }
+                        saving={ saving }
+                        display={ props.display }
+                        onClick={ props.noColumns ? props.setItem : null }
+                        bulkItem={ new props.dashup.Model({}, props.dashup) }
+                        noColumns={ props.noColumns }
+                      />
+                    </Grid>
+                  );
+                }) }
+              </div>
+            ) : (
+              <Grid
+                id={ props.page.get('_id') }
+                skip={ skip }
+                sort={ props.page.get('data.sort') || {} }
+                limit={ props.page.get('data.limit') || 25 }
                 saving={ saving }
-                display={ props.display }
-                onClick={ props.noColumns ? props.setItem : null }
-                bulkItem={ new props.dashup.Model({}, props.dashup) }
-                onSelect={ onSelect }
-                selected={ selected }
-                noColumns={ props.noColumns }
-                isSelected={ isSelected }
-              />
-            </Grid>
-          ) }
+                reload={ reload }
+                dashup={ props.dashup }
+                updated={ updated }
+                columns={ props.page.get('data.columns') || [] }
+                available={ props.getFields() }
+
+                canAlter={ props.dashup.can(props.page, 'alter') }
+                canSubmit={ props.dashup.can(props.page, 'submit') }
+                fullHeight
+
+                setSort={ setSort }
+                setSkip={ setSkip }
+                actions={ actions }
+                loadData={ loadData }
+                setLimit={ setLimit }
+                setColumns={ setColumns }
+                renderField={ renderField }
+                onRemoveBulk={ removeBulk }
+              >
+                <Grid.Group
+                  saving={ saving }
+                  display={ props.display }
+                  onClick={ props.noColumns ? props.setItem : null }
+                  bulkItem={ new props.dashup.Model({}, props.dashup) }
+                  onSelect={ onSelect }
+                  selected={ selected }
+                  noColumns={ props.noColumns }
+                  isSelected={ isSelected }
+                />
+              </Grid>
+            ) }
+          </PerfectScrollbar>
         </Page.Body>
       ) }
     </Page>
