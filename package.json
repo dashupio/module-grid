@@ -14,14 +14,18 @@
     "@babel/plugin-transform-runtime": "^7.11.5",
     "@babel/plugin-transform-typescript": "^7.11.0",
     "@babel/preset-env": "^7.11.5",
+    "@dashup/core": "^1.2.1",
     "@dashup/eslint-config-dashup": "0.0.1",
     "@dashup/module": "^2.0.3",
     "@dashup/ui": "0.0.1",
     "babel-plugin-add-module-exports": "^1.0.4",
     "dot-prop": "^5.3.0",
     "handlebars": "^4.7.7",
+    "i": "^0.3.6",
+    "npm": "^7.19.0",
     "perfect-scrollbar": "^1.5.0",
     "popper.js": "^1.16.1",
+    "socket.io-client": "^4.1.2",
     "sortablejs": "^1.12.0",
     "uuid": "^8.3.0"
   }
