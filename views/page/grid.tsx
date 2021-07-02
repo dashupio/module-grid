@@ -444,6 +444,7 @@ const PageGrid = (props = {}) => {
     };
 
     // add listener
+    props.page.on('reload', onUpdate);
     props.page.on('data.sort', onUpdate);
     props.page.on('data.group', onUpdate);
     props.page.on('data.filter', onUpdate);
@@ -454,6 +455,7 @@ const PageGrid = (props = {}) => {
     // return fn
     return () => {
       // remove listener
+      props.page.removeListener('reload', onUpdate);
       props.page.removeListener('data.sort', onUpdate);
       props.page.removeListener('data.group', onUpdate);
       props.page.removeListener('data.filter', onUpdate);
