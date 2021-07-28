@@ -1,9 +1,12 @@
 
 // import dependencies
-import PerfectScrollbar from 'react-perfect-scrollbar';
+import SimpleBar from 'simplebar-react';
 import { Page, Grid, View, Hbs } from '@dashup/ui';
 import React, { useState, useEffect } from 'react';
 import { Dropdown, OverlayTrigger, Popover, Button } from 'react-bootstrap';
+
+// scss
+import './grid.scss';
 
 // create gallery page
 const PageGrid = (props = {}) => {
@@ -540,7 +543,7 @@ const PageGrid = (props = {}) => {
       <Page.Filter onSearch={ setSearch } onSort={ setSort } onTag={ setTag } onFilter={ setFilter } isString />
       { !required.find((r) => !props.page.get(r.key)) && (
         <Page.Body>
-          <PerfectScrollbar className="d-flex flex-1 p-relative">
+          <SimpleBar className="d-flex flex-1 p-relative sb-grid">
             { groups && groups.length ? (
               <div className="d-flex flex-column w-100">
                 { groups.map((group) => {
@@ -622,7 +625,7 @@ const PageGrid = (props = {}) => {
                 />
               </Grid>
             ) }
-          </PerfectScrollbar>
+          </SimpleBar>
         </Page.Body>
       ) }
     </Page>

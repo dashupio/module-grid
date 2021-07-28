@@ -1,7 +1,7 @@
 
 // import react
+import SimpleBar from 'simplebar-react';
 import { Hbs, View, Grid } from '@dashup/ui';
-import ReactPerfectScrollbar from 'react-perfect-scrollbar';
 import { OverlayTrigger, Popover, Button } from 'react-bootstrap';
 import React, { useState } from 'react';
 
@@ -29,11 +29,17 @@ const BlockGrid = (props = {}) => {
 
     // get query
     const query = props.getQuery(modelPage);
+
+    // total
+    const total = await props.getQuery(modelPage).count();
+
+    // set total
+    setTotal(total)
     
     // list
     return {
+      total,
       items : await query.skip(skip).limit(limit).listen(),
-      total : await props.getQuery(modelPage).count(),
     };
   };
 
@@ -194,64 +200,71 @@ const BlockGrid = (props = {}) => {
 
   // is selected
   const isSelected = (item) => {
+    // sub selected
+    const subSelected = props.selected || selected;
+
     // check type
-    if (selected.type === 'all') return true;
-    if (selected.type === 'items') return selected.items.includes(item.get('_id'));
-    if (selected.type === 'minus') return !selected.items.includes(item.get('_id'));
+    if (subSelected.type === 'all') return true;
+    if (subSelected.type === 'items') return subSelected.items.includes(item.get('_id'));
+    if (subSelected.type === 'minus') return !subSelected.items.includes(item.get('_id'));
   };
 
   // on select
   const onSelect = (item) => {
-    // set selected
+    // sub selected
+    const subSelected = { ...(props.selected || selected) };
 
     // check type
     if (item === 'clear') {
       // fix clear
-      selected.type  = 'items';
-      selected.items = [];
+      subSelected.type  = 'items';
+      subSelected.items = [];
     } else if (item === 'all') {
-      if (selected.type === 'all') {
-        selected.type = 'items';
+      if (subSelected.type === 'all') {
+        subSelected.type = 'items';
       } else {
-        selected.type  = 'all';
-        selected.items = [];
+        subSelected.type  = 'all';
+        subSelected.items = [];
       }
     } else {
       // is selected
       const isItemSelected = isSelected(item);
   
       // check type
-      if (selected.type === 'all') {
-        selected.type  = 'minus';
-        selected.items = [item.get('_id')];
-      } else if (selected.type === 'items' && isItemSelected) {
+      if (subSelected.type === 'all') {
+        subSelected.type  = 'minus';
+        subSelected.items = [item.get('_id')];
+      } else if (subSelected.type === 'items' && isItemSelected) {
         // set item
-        selected.items = selected.items.filter((id) => id !== item.get('_id'));
-      } else if (selected.type === 'minus' && isItemSelected) {
+        subSelected.items = subSelected.items.filter((id) => id !== item.get('_id'));
+      } else if (subSelected.type === 'minus' && isItemSelected) {
         // push item
-        selected.items.push(item.get('_id'));
+        subSelected.items.push(item.get('_id'));
       } else if (!isItemSelected) {
         // check minus
-        if (selected.type === 'minus') {
+        if (subSelected.type === 'minus') {
           // filter minused item
-          selected.items = selected.items.filter((id) => id !== item.get('_id'));
+          subSelected.items = subSelected.items.filter((id) => id !== item.get('_id'));
 
           // check minus
-          if (!selected.items.length) selected.type = 'all';
+          if (!subSelected.items.length) subSelected.type = 'all';
         } else {
           // push
-          selected.items.push(item.get('_id'));
+          subSelected.items.push(item.get('_id'));
         }
       }
     }
 
     // total
-    if (selected.type === 'all') selected.total = total;
-    if (selected.type === 'minus') selected.total = total - (selected.items.length);
-    if (selected.type === 'items') selected.total = selected.items.length;
+    if (subSelected.type === 'all') subSelected.total = total;
+    if (subSelected.type === 'minus') subSelected.total = total - (subSelected.items.length);
+    if (subSelected.type === 'items') subSelected.total = subSelected.items.length;
 
     // set selected
-    setSelected({ ...selected });
+    if (props.setSelected) return props.setSelected(subSelected);
+
+    // set selected
+    setSelected({ ...subSelected });
   };
 
   // return jsx
@@ -275,33 +288,37 @@ const BlockGrid = (props = {}) => {
           </div>
         ) : (
           <div className={ `d-flex flex-1 ${props.block.background ? ' card-body' : ''}` }>
-            <Grid
-              id={ props.block.uuid }
-              skip={ skip }
-              sort={ props.block.sort || {} }
-              limit={ limit }
-              columns={ props.block.columns || [] }
-              available={ getFields() }
-  
-              canAlter={ props.dashup.can(getForms()[0], 'alter') }
-              canSubmit={ props.dashup.can(getForms()[0], 'submit') }
-  
-              setSort={ setSort }
-              setSkip={ setSkip }
-              actions={ actions }
-              loadData={ loadData }
-              setLimit={ setLimit }
-              setColumns={ setColumns }
-              renderField={ renderField }
+            <div className="h-100 w-100 fit-content">
+              <SimpleBar className="h-100 simplebar-flex">
+                <Grid
+                  id={ props.block.uuid }
+                  skip={ skip }
+                  sort={ props.block.sort || {} }
+                  limit={ limit }
+                  columns={ props.block.columns || [] }
+                  available={ getFields() }
+      
+                  canAlter={ props.dashup.can(getForms()[0], 'alter') }
+                  canSubmit={ props.dashup.can(getForms()[0], 'submit') }
+      
+                  setSort={ setSort }
+                  setSkip={ setSkip }
+                  actions={ actions }
+                  loadData={ loadData }
+                  setLimit={ setLimit }
+                  setColumns={ setColumns }
+                  renderField={ renderField }
 
-              fullHeight
-            >
-              <Grid.Group
-                onSelect={ onSelect }
-                selected={ selected }
-                isSelected={ isSelected }
-              />
-            </Grid>
+                  fullHeight
+                >
+                  <Grid.Group
+                    onSelect={ onSelect }
+                    selected={ props.selected || selected }
+                    isSelected={ isSelected }
+                  />
+                </Grid>
+              </SimpleBar>
+            </div>
           </div>
         )
       ) }
