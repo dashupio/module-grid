@@ -20,7 +20,7 @@ export default class GridPage extends Struct {
    */
   get icon() {
     // return page type label
-    return 'fa fa-align-justify';
+    return 'fad fa-align-justify text-info';
   }
 
   /**
@@ -28,7 +28,7 @@ export default class GridPage extends Struct {
    */
   get title() {
     // return page type label
-    return 'Grid View';
+    return 'Grid';
   }
 
   /**
@@ -63,6 +63,6 @@ export default class GridPage extends Struct {
    */
   get description() {
     // return description string
-    return 'Grid View';
+    return 'Filterable Customizable Grid view';
   }
 }

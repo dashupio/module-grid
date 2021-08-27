@@ -1,9 +1,12 @@
 
 // import dependencies
 import SimpleBar from 'simplebar-react';
-import { Page, Grid, View, Hbs } from '@dashup/ui';
+import { Dropdown } from 'react-bootstrap';
+import { Page, Grid, View } from '@dashup/ui';
 import React, { useState, useEffect } from 'react';
-import { Dropdown, OverlayTrigger, Popover, Button } from 'react-bootstrap';
+
+// import local
+import PageGridField from './grid/field';
 
 // scss
 import './grid.scss';
@@ -19,7 +22,6 @@ const PageGrid = (props = {}) => {
   const [saving, setSaving] = useState(false);
   const [reload, setReload] = useState(new Date());
   const [config, setConfig] = useState(false);
-  const [prevent, setPrevent] = useState(false);
   const [updated, setUpdated] = useState(new Date());
   const [selected, setSelected] = useState({ type : 'items', items : [] });
 
@@ -189,83 +191,31 @@ const PageGrid = (props = {}) => {
     });
   };
 
+  // test page
+  const testPage = (props.getModels()[0] || props.page)
+
   // render field
   const renderField = (item, column, bulk = false) => {
-    // find field
-    const field = props.getField(column.field);
-
-    // check if custom
-    if (column.field === 'custom') return (
-      <div className="grid-column-content">
-        <Hbs template={ column.view || '' } data={ item.toJSON() } />
-      </div>
-    );
-
-    // on save
-    const onSave = async () => {
-      // await save
-      await bulk ? saveBulk(item, field) : saveItem(item);
-
-      // close
-      if (typeof document?.body?.click === 'function') document.body.click();
-    };
-
-    // return no field
-    return field && (
-      <OverlayTrigger trigger="click" placement="bottom-start" className="grid-column-content" rootClose overlay={ (
-        <Popover className="popover-grid">
-          <div className="p-2">
-            <View
-              view="input"
-              type="field"
-              item={ item }
-              field={ field }
-              value={ item.get(field.name || field.value) }
-              struct={ field.type }
-              dashup={ props.dashup }
-              column={ column }
-              onChange={ (f, value) => item.set(field.name || field.value, value) }
-              setPrevent={ setPrevent }
-            >
-              <div className="text-center">
-                <i className="fa fa-spinner fa-spin" />
-              </div>
-            </View>
-            <Button variant="primary" disabled={ saving || prevent } className="w-100" onClick={ (e) => onSave() }>
-              { prevent ? 'Uploading...' : (
-                saving ? 'Saving...' : (
-                  bulk ? 
-                  `Update ${(bulk?.total || 0).toLocaleString()} items` :
-                  'Submit'
-                )
-              ) }
-            </Button>
-          </div>
-        </Popover>
-      ) }>
-        <div className="grid-column-content">
-          <View
-            view="view"
-            type="field"
-            item={ item }
-            field={ field }
-            value={ item.get(field.name || field.value) }
-            struct={ field.type }
-            dashup={ props.dashup }
-            column={ column }
-            >
-            <div className="text-center">
-              <i className="fa fa-spinner fa-spin" />
-            </div>
-          </View>
-        </div>
-      </OverlayTrigger>
+    // return rendered
+    return (
+      <PageGridField
+        bulk={ bulk }
+        item={ item }
+        page={ testPage }
+        field={ props.getField(column.field) }
+        dashup={ props.dashup }
+        column={ column }
+        saving={ saving }
+        saveBulk={ saveBulk }
+        saveItem={ saveItem }
+        setSaving={ setSaving }
+        />
     );
   };
 
   // set actions
   const actions = [
-    ...(props.getForms().map((f) => {
+    ...(props.dashup.can(testPage, 'submit') ? props.getForms().map((f) => {
       return {
         id      : f.get('_id'),
         icon    : f.get('icon'),
@@ -275,11 +225,11 @@ const PageGrid = (props = {}) => {
           props.setItem(item);
         },
       };
-    })),
+    }) : []),
 
-    ...(props.getForms().length ? ['divider'] : []),
+    ...(props.dashup.can(testPage, 'submit') && props.getForms().length ? ['divider'] : []),
 
-    ...(props.getForms()[0] && props.getForms()[0].get ? [{
+    ...(props.dashup.can(testPage, 'submit') && props.getForms()[0] && props.getForms()[0].get ? [{
       id   : 'remove',
       href : (item) => {
         return props.getForms()[0] ? `/app/${props.getForms()[0].get('_id')}/${item.get('_id')}/remove?redirect=/app/${props.page.get('_id')}` : null;

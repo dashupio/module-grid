@@ -20,7 +20,7 @@ export default class GridBlock extends Struct {
    */
   get icon() {
     // return page type label
-    return 'fa fa-bars';
+    return 'fad fa-bars';
   }
 
   /**
@@ -28,7 +28,7 @@ export default class GridBlock extends Struct {
    */
   get title() {
     // return page type label
-    return 'Grid Block';
+    return 'Grid';
   }
 
   /**
@@ -63,6 +63,6 @@ export default class GridBlock extends Struct {
    */
   get description() {
     // return description string
-    return 'Create a grid on any of your models/forms';
+    return 'Customizable Grid Block';
   }
 }
