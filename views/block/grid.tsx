@@ -1,9 +1,8 @@
 
 // import react
 import SimpleBar from 'simplebar-react';
-import { Hbs, View, Grid } from '@dashup/ui';
-import { OverlayTrigger, Popover, Button } from 'react-bootstrap';
 import React, { useState } from 'react';
+import { Hbs, View, Grid, OverlayTrigger, Popover, Button } from '@dashup/ui';
 
 // block list
 const BlockGrid = (props = {}) => {

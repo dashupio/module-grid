@@ -1,8 +1,7 @@
 
 // import dependencies
 import SimpleBar from 'simplebar-react';
-import { Dropdown } from 'react-bootstrap';
-import { Page, Grid, View } from '@dashup/ui';
+import { Dropdown, Page, Grid } from '@dashup/ui';
 import React, { useState, useEffect } from 'react';
 
 // import local

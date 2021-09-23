@@ -1,8 +1,7 @@
 
 // react
-import { View, Hbs } from '@dashup/ui';
 import React, { useState, useEffect } from 'react';
-import { OverlayTrigger, Popover, Button } from 'react-bootstrap';
+import { View, Hbs, OverlayTrigger, Popover, Button } from '@dashup/ui';
 
 // page grid field
 const PageGridField = (props = {}) => {
