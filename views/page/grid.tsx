@@ -1,28 +1,39 @@
 
 // import dependencies
-import SimpleBar from 'simplebar-react';
-import { Dropdown, Page, Grid } from '@dashup/ui';
-import React, { useState, useEffect } from 'react';
-
-// import local
-import PageGridField from './grid/field';
+import { Box, DataGrid } from '@dashup/ui';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Icon, Button, Menu, MenuItem, Page, View, CircularProgress, GridActionsCellItem } from '@dashup/ui';
 
 // scss
 import './grid.scss';
 
+// debounce
+let timeout = null;
+
+// debounce
+const debounce = (fn, to = 200) => {
+  clearTimeout(timeout);
+  timeout = setTimeout(fn, to);
+};
+
 // create gallery page
 const PageGrid = (props = {}) => {
   // groups
+  const [open, setOpen] = useState(false);
   const [skip, setSkip] = useState(0);
   const [form, setForm] = useState(null);
   const [share, setShare] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [groups, setGroups] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [reload, setReload] = useState(new Date());
   const [config, setConfig] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [updated, setUpdated] = useState(new Date());
   const [selected, setSelected] = useState({ type : 'items', items : [] });
+
+  // data elements
+  const [data, setData] = useState({});
+  const [groups, setGroups] = useState(null);
+
+  // wrap ref
+  const wrapRef = useRef(null);
 
   // required
   const required = typeof props.required !== 'undefined' ? props.required : [{
@@ -32,6 +43,76 @@ const PageGrid = (props = {}) => {
     key   : 'data.forms.0',
     label : 'Form',
   }];
+
+  // test page
+  const testPage = (props.getModels()[0] || props.page);
+
+  // full width
+  const fullWidth = wrapRef.current?.scrollWidth;
+
+  // set actions
+  const actions = [
+    ...(props.dashup.can(testPage, 'submit') && props.getForms()[0] && props.getForms()[0].get ? [{
+      id      : props.getForms()[0].get('_id'),
+      icon    : <Icon type="fas" icon="pencil" fixedWidth />,
+      label   : props.getForms()[0].get('name'),
+      onClick : (item) => {
+        setForm(props.getForms()[0].get('_id'));
+        props.setItem(item);
+      }
+    }] : []),
+
+    ...(props.dashup.can(testPage, 'submit') && props.getForms()[0] && props.getForms()[0].get ? [{
+      id    : 'remove',
+      icon  : <Icon type="fas" icon="trash" fixedWidth />,
+      label : 'Remove',
+      color : 'error',
+    }] : []),
+  ];
+
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // async load methods
+  //
+  ////////////////////////////////////////////////////////////////////////////////
+
+  // load everything
+  const load = async () => {
+    // load groups
+    setLoading(true);
+    
+    // load groups
+    const groups = await loadGroups();
+
+    // set groups
+    setGroups(groups);
+
+    // check groups
+    if (groups) {
+      // reduce
+      const newData = (await Promise.all(groups.map(async (group) => {
+        // return value
+        return {
+          group,
+          data : await loadData(group),
+        };
+      }))).reduce((accum, { group, data }) => {
+        // async
+        accum[group.value] = data;
+      }, {});
+
+      // set data
+      setData(newData);
+    } else {
+      // set data
+      setData({
+        0 : await loadData(null),
+      });
+    }
+    
+    // set loading
+    setLoading(false);
+  };
   
   // load groups
   const loadGroups = async () => {
@@ -39,7 +120,7 @@ const PageGrid = (props = {}) => {
     if (!props.page.get('data.group')) return;
 
     // get groupBy field
-    const groupBy = props.getFields().find((f) => f.uuid === props.page.get('data.group'));
+    const groupBy = getField(props.page.get('data.group'));
 
     // check groupBy field
     if (!groupBy) return;
@@ -106,19 +187,6 @@ const PageGrid = (props = {}) => {
     // get total
     const newTotal = await getQuery().count();
 
-    // actual total
-    if (group) {
-      // set it as logic
-      if (false) setTotal({
-        ...(typeof total === 'object' ? total : {}),
-
-        [group.value] : newTotal,
-      });
-    } else {
-      // set number total
-      setTotal(newTotal);
-    }
-
     // return items
     return {
       total : newTotal,
@@ -126,23 +194,42 @@ const PageGrid = (props = {}) => {
     };
   };
 
-  // save item
-  const saveItem = async (item) => {
-    // set saving
-    setSaving(true);
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // async save methods
+  //
+  ////////////////////////////////////////////////////////////////////////////////
 
-    // save
-    await item.save();
+  // on sort
+  const onSort = ([sort]) => {
+    // get field
+    let field = sort?.field && getField(sort.field);
 
-    // set saving
-    setSaving(false);
+    // check sort
+    if (props.page.get('data.sort.field') === sort?.field && !sort.sort) {
+      // sort
+      if (props.page.get('data.sort.way') === 1) {
+        sort.sort = 'desc';
+      }
+    }
+
+    // check sort
+    if (sort?.field && !sort.sort) sort.sort = 'asc';
+
+    // check sort
+    if (props.page.get('data.sort.field') === sort?.field && props.page.get('data.sort.way') === -1) {
+      field = null;
+    }
+
+    // sort
+    props.setData('sort', field ? {
+      way   : sort.sort === 'asc' ? 1 : -1,
+      field : field.uuid || sort?.field,
+    } : null);
   };
 
   // save bulk
   const saveBulk = async (item, field) => {
-    // set saving
-    setSaving(true);
-
     // do bulk update
     await props.dashup.rpc({
       page   : props.page.get('_id'),
@@ -157,17 +244,10 @@ const PageGrid = (props = {}) => {
     }, {
       [field.name || field.uuid] : item.toJSON()[field.name || field.uuid],
     });
-
-    // set to page
-    setSaving(false);
-    setReload(new Date());
   };
 
   // save bulk
   const removeBulk = async () => {
-    // set saving
-    setSaving(true);
-
     // do bulk update
     await props.dashup.rpc({
       page   : props.page.get('_id'),
@@ -181,63 +261,19 @@ const PageGrid = (props = {}) => {
       query : props.getQuery().query,
     });
 
+    // reset selected
+    selected.type  = 'items';
+    selected.items = [];
+
     // set to page
-    setSaving(false);
-    setReload(new Date());
-    setSelected({
-      type  : 'items',
-      items : [],
-    });
+    setSelected({ ...selected });
   };
 
-  // test page
-  const testPage = (props.getModels()[0] || props.page)
-
-  // render field
-  const renderField = (item, column, bulk = false) => {
-    // return rendered
-    return (
-      <PageGridField
-        bulk={ bulk }
-        item={ item }
-        page={ testPage }
-        field={ props.getField(column.field) }
-        dashup={ props.dashup }
-        column={ column }
-        saving={ saving }
-        saveBulk={ saveBulk }
-        saveItem={ saveItem }
-        setSaving={ setSaving }
-        />
-    );
-  };
-
-  // set actions
-  const actions = [
-    ...(props.dashup.can(testPage, 'submit') ? props.getForms().map((f) => {
-      return {
-        id      : f.get('_id'),
-        icon    : f.get('icon'),
-        content : f.get('name'),
-        onClick : (item) => {
-          setForm(f.get('_id'));
-          props.setItem(item);
-        },
-      };
-    }) : []),
-
-    ...(props.dashup.can(testPage, 'submit') && props.getForms().length ? ['divider'] : []),
-
-    ...(props.dashup.can(testPage, 'submit') && props.getForms()[0] && props.getForms()[0].get ? [{
-      id   : 'remove',
-      href : (item) => {
-        return props.getForms()[0] ? `/app/${props.getForms()[0].get('_id')}/${item.get('_id')}/remove?redirect=/app/${props.page.get('_id')}` : null;
-      },
-      icon    : 'trash fas',
-      content : 'Remove',
-      variant : 'danger',
-    }] : []),
-  ];
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // set methods
+  //
+  ////////////////////////////////////////////////////////////////////////////////
 
   // set tag
   const setTag = async (field, value) => {
@@ -260,53 +296,10 @@ const PageGrid = (props = {}) => {
     await props.setUser('filter.tags', tags);
   };
 
-  // set sort
-  const setSort = async (column, way = 1) => {
-    // let sort
-    let sort;
-
-    // check field
-    if (
-      column && props.page.get('data.sort') &&
-      ((column.field !== 'custom' && column.field === props.page.get('data.sort.field')) ||
-      (column.field === 'custom' && column.sort === props.page.get('data.sort.sort')))
-    ) {
-      // reverse sort
-      if (props.page.get('data.sort.way') === -1) {
-        column = null;
-      } else {
-        way = -1;
-      }
-    }
-    
-    // set sort
-    if (!column) {
-      sort = null;
-    } else {
-      // create sort
-      sort = {
-        way,
-  
-        id    : column.id,
-        sort  : column.sort,
-        field : column.field,
-      };
-    }
-
-    // set data
-    await props.setData('sort', sort);
-  };
-
-  // set sort
-  const setLimit = async (limit = 25) => {
-    // set data
-    await props.setData('limit', limit);
-  };
-
   // set search
   const setSearch = (search = '') => {
     // set page data
-    props.page.set('user.search', search.length ? search : null);
+    props.setUser('search', search.length ? search : null);
   };
 
   // set columns
@@ -321,105 +314,185 @@ const PageGrid = (props = {}) => {
     props.setUser('query', filter, true);
   };
 
-  // is selected
-  const isSelected = (item, group) => {
-    // check type
-    if (selected.type === 'all') return true;
-    if (selected.type === 'items') return selected.items.includes(item.get('_id'));
-    if (selected.type === 'minus') return !selected.items.includes(item.get('_id'));
+  // update column
+  const setColumn = (id, updates) => {
+    // find column
+    const column = (props.page.get('data.columns') || []).find((c) => c.id === id);
+
+    // set updates
+    Object.keys(updates).forEach((key) => column[key] = updates[key]);
+    
+    // update columns
+    setColumns(props.page.get('data.columns'));
   };
 
-  // on select
-  const onSelect = (item, group) => {
-    // set selected
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // get methods
+  //
+  ////////////////////////////////////////////////////////////////////////////////
 
-    // check type
-    if (item === 'clear') {
-      // fix clear
-      selected.type  = 'items';
-      selected.items = [];
-    } else if (item === 'all') {
-      if (selected.type === 'all') {
-        selected.type = 'items';
-      } else {
-        selected.type  = 'all';
-        selected.items = [];
-      }
-    } else {
-      // is selected
-      const isItemSelected = isSelected(item);
+  // get item
+  const getItem = (key, id) => {
+    // return item
+    return (data[key] || {}).items.find((item) => item.get('_id') === id);
+  };
+
+  // get sort
+  const getSort = () => {
+    // get field
+    const field = props.page.get('data.sort.field') && getField(props.page.get('data.sort.field'));
+
+    // field
+    return field && (props.page.get('data.columns') || []).find((c) => c.field === field.uuid) ? [{
+      sort  : props.page.get('data.sort.sort') === 1 ? 'asc' : 'desc',
+      field : field.name || field.uuid,
+    }] : [];
+  };
+
+  // get rows
+  const getRows = ({ items }) => {
+    // return items
+    return [...(items || []).map((item) => {
+      // return column
+      return {
+        id : item.get('_id'),
   
-      // check type
-      if (selected.type === 'all') {
-        selected.type  = 'minus';
-        selected.items = [item.get('_id')];
-      } else if (selected.type === 'items' && isItemSelected) {
-        // set item
-        selected.items = selected.items.filter((id) => id !== item.get('_id'));
-      } else if (selected.type === 'minus' && isItemSelected) {
-        // push item
-        selected.items.push(item.get('_id'));
-      } else if (!isItemSelected) {
-        // check minus
-        if (selected.type === 'minus') {
-          // filter minused item
-          selected.items = selected.items.filter((id) => id !== item.get('_id'));
+        ...(item.get()),
+      };
+    })];
+  };
 
-          // check minus
-          if (!selected.items.length) selected.type = 'all';
-        } else {
-          // push
-          selected.items.push(item.get('_id'));
-        }
-      }
-    }
+  // get item
+  const getField = (field) => {
+    // get groupBy field
+    return props.getFields().find((f) => f.uuid === field || f.name === field);
+  };
 
-    // total
-    if (selected.type === 'all') selected.total = total;
-    if (selected.type === 'minus') selected.total = total - (selected.items.length);
-    if (selected.type === 'items') selected.total = selected.items.length;
+  // get columns
+  const getColumns = (key) => {
+    // return values
+    return [...((props.page.get('data.columns') || []).map((col) => {
+      // get field
+      const field = getField(col.field);
+  
+      // return column
+      return {
+        renderCell     : (opts) => renderCell(opts, key, field, col),
+        renderEditCell : (opts) => renderEditCell(opts, key, field, col),
+  
+        id         : col.id,
+        field      : field?.name || field?.uuid || col.field,
+        width      : col.width || (col.basis && fullWidth ? ((fullWidth - 200) * (col.basis / 100)) : null),
+        editable   : true,
+        resizable  : true,
+        headerName : col.title,
+      };
+    })),
+    {
+      id         : 'actions',
+      type       : 'actions',
+      field      : 'actions',
+      width      : 100,
+      headerName : 'Actions',
+      getActions : ({ id }) => {
+        // return jsx
+        return actions.map((action) => {
+          // return jsx
+          return <GridActionsCellItem
+            { ...action }
+            key={ action.id }
+            onClick={ () => action.onClick(getItem(key, id)) }
+          />;
+        });
+      },
+    }];
+  };
 
-    // set selected
-    setSelected({ ...selected });
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // render methods
+  //
+  ////////////////////////////////////////////////////////////////////////////////
+
+  // render cell
+  const renderCell = ({ id }, key, field, col) => {
+    // get item
+    const item = getItem(key, id);
+
+    // return jsx
+    return field && (
+      <View
+        view="view"
+        type="field"
+        item={ item }
+        field={ field }
+        value={ item.get(field?.name || field?.value) }
+        struct={ field?.type }
+        dashup={ props.dashup }
+        column={ col }
+      >
+        <CircularProgress />
+      </View>
+    );
+  };
+
+  // render edit cell
+  const renderEditCell = ({ id }, key, field, col) => {
+    // get item
+    const item = getItem(key, id);
+
+    // return jsx
+    return (
+      <View
+        isInline
+        autoFocus
+
+        view="input"
+        type="field"
+        item={ item }
+        field={ field }
+        value={ item.get(field?.name || field?.uuid) }
+        struct={ field?.type }
+        dashup={ props.dashup }
+        column={ col }
+        onChange={ async (f, value) => {
+          // save
+          item.set(field?.name || field?.uuid, value);
+          await item.save();
+        } }
+      >
+        <CircularProgress />
+      </View>
+    );
   };
 
   // use effect
   useEffect(() => {
-    // load groups
-    loadGroups().then((groups) => {
-      setGroups(groups);
-    });
-
     // on update
     const onUpdate = () => {
       setUpdated(new Date());
     };
 
+    // load groups
+    load();
+
     // add listener
     props.page.on('reload', onUpdate);
-    props.page.on('data.sort', onUpdate);
-    props.page.on('data.group', onUpdate);
-    props.page.on('data.filter', onUpdate);
-    props.page.on('user.search', onUpdate);
-    props.page.on('user.filter.me', onUpdate);
-    props.page.on('user.filter.tags', onUpdate);
 
     // return fn
     return () => {
       // remove listener
       props.page.removeListener('reload', onUpdate);
-      props.page.removeListener('data.sort', onUpdate);
-      props.page.removeListener('data.group', onUpdate);
-      props.page.removeListener('data.filter', onUpdate);
-      props.page.removeListener('user.search', onUpdate);
-      props.page.removeListener('user.filter.me', onUpdate);
-      props.page.removeListener('user.filter.tags', onUpdate);
     };
   }, [
+    skip,
     props.page.get('_id'),
     props.page.get('type'),
     props.page.get('data.sort'),
     props.page.get('data.group'),
+    props.page.get('data.limit'),
+    props.page.get('user.query'),
     props.page.get('data.filter'),
     props.page.get('user.search'),
     props.page.get('user.filter.me'),
@@ -436,145 +509,77 @@ const PageGrid = (props = {}) => {
 
       <Page.Menu onConfig={ () => setConfig(true) } presence={ props.presence } onShare={ () => setShare(true) }>
         <>
-          { !props.page.get('data.group') && (
-            <Dropdown>
-              <Dropdown.Toggle variant="light" id="dropdown-limit" className="me-2">
-                Per Page:
-                <b className="ms-1">{ props.page.get('data.limit') || 25 }</b>
-              </Dropdown.Toggle>
-
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={ (e) => props.setData('limit', 25) }>
-                  25
-                </Dropdown.Item>
-                <Dropdown.Item onClick={ (e) => props.setData('limit', 50) }>
-                  50
-                </Dropdown.Item>
-                <Dropdown.Item onClick={ (e) => props.setData('limit', 75) }>
-                  75
-                </Dropdown.Item>
-                <Dropdown.Item onClick={ (e) => props.setData('limit', 100) }>
-                  100
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          ) }
           { props.dashup.can(props.page, 'submit') && !!props.getForms().length && (
             props.getForms().length > 1 ? (
-              <Dropdown>
-                <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
-                  <i className="fat fa-plus me-2" />
+              <>
+                <Button
+                  variant="contained"
+                  onClick={ (e) => setOpen(open ? false : e.target) }
+                >
                   Create
-                </Dropdown.Toggle>
-  
-                <Dropdown.Menu>
+                </Button>
+                <Menu
+                  open={ !!open }
+                  onClose={ () => setOpen(false) }
+                  anchorEl={ open }
+                  anchorOrigin={ {
+                    vertical   : 'bottom',
+                    horizontal : 'right',
+                  } }
+                  transformOrigin={ {
+                    vertical   : 'top',
+                    horizontal : 'right',
+                  } }
+                >
                   { props.getForms().map((form) => {
-  
-                    // return jsx
-                    return (
-                      <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => !setForm(form.get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }>
-                        <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
-                        { form.get('name') }
-                      </Dropdown.Item>
-                    );
-                  }) }
-                </Dropdown.Menu>
-              </Dropdown>
+                      // return jsx
+                      return (
+                        <MenuItem key={ `create-${form.get('_id')}` } onClick={ (e) => !setForm(form.get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }>
+                          { form.get('name') }
+                        </MenuItem>
+                      );
+                    })
+                  }
+                </Menu>
+              </>
             ) : (
-              <button className="btn btn-primary me-2" onClick={ (e) => !setForm(props.getForms()[0].get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }>
-                <i className={ `me-2 fa-${props.getForms()[0].get('icon') || 'pencil fas'}` } />
+              <Button
+                variant="contained"
+                onClick={ (e) => !setForm(props.getForms()[0].get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }
+              >
                 { props.getForms()[0].get('name') }
-              </button>
+              </Button>
             )
           ) }
         </>
       </Page.Menu>
-      <Page.Filter onSearch={ setSearch } onSort={ setSort } onTag={ setTag } onFilter={ setFilter } isString />
+      <Page.Filter onSearch={ setSearch } onSort={ (s) => onSort([s]) } onTag={ setTag } onFilter={ setFilter } isString />
       { !required.find((r) => !props.page.get(r.key)) && (
         <Page.Body>
-          <SimpleBar className="d-flex flex-1 p-relative sb-grid">
-            { groups && groups.length ? (
-              <div className="d-flex flex-column w-100">
-                { groups.map((group) => {
-                  // return jsx
-                  return (
-                    <Grid
-                      id={ props.page.get('_id') }
-                      key={ `group-${group.id || group.label}` }
-                      skip={ skip }
-                      sort={ props.page.get('data.sort') || {} }
-                      limit={ props.page.get('data.limit') || 25 }
-                      saving={ saving }
-                      reload={ reload }
-                      dashup={ props.dashup }
-                      updated={ updated }
-                      columns={ props.page.get('data.columns') || [] }
-                      className="w-100"
-                      available={ props.getFields() }
+          { Object.keys(data).map((key) => {
+            // return jsx
+            return (
+              <Box key={ `group-${key}` } flex={ 1 } ref={ wrapRef }>
+                <DataGrid
+                  pagination
+                  checkboxSelection
 
-                      canAlter={ props.dashup.can(props.page, 'alter') }
-                      canSubmit={ props.dashup.can(props.page, 'submit') }
-
-                      setSort={ setSort }
-                      setSkip={ setSkip }
-                      actions={ actions }
-                      loadData={ () => loadData(group) }
-                      setLimit={ setLimit }
-                      setColumns={ setColumns }
-                      renderField={ renderField }
-                      onRemoveBulk={ removeBulk }
-                    >
-                      <Grid.Group
-                        label={ group.label }
-                        saving={ saving }
-                        display={ props.display }
-                        onClick={ props.noColumns ? props.setItem : null }
-                        bulkItem={ new props.dashup.Model({}, props.dashup) }
-                        noColumns={ props.noColumns }
-                      />
-                    </Grid>
-                  );
-                }) }
-              </div>
-            ) : (
-              <Grid
-                id={ props.page.get('_id') }
-                skip={ skip }
-                sort={ props.page.get('data.sort') || {} }
-                limit={ props.page.get('data.limit') || 25 }
-                saving={ saving }
-                reload={ reload }
-                dashup={ props.dashup }
-                updated={ updated }
-                columns={ props.page.get('data.columns') || [] }
-                available={ props.getFields() }
-
-                canAlter={ props.dashup.can(props.page, 'alter') }
-                canSubmit={ props.dashup.can(props.page, 'submit') }
-                fullHeight
-
-                setSort={ setSort }
-                setSkip={ setSkip }
-                actions={ actions }
-                loadData={ loadData }
-                setLimit={ setLimit }
-                setColumns={ setColumns }
-                renderField={ renderField }
-                onRemoveBulk={ removeBulk }
-              >
-                <Grid.Group
-                  saving={ saving }
-                  display={ props.display }
-                  onClick={ props.noColumns ? props.setItem : null }
-                  bulkItem={ new props.dashup.Model({}, props.dashup) }
-                  onSelect={ onSelect }
-                  selected={ selected }
-                  noColumns={ props.noColumns }
-                  isSelected={ isSelected }
+                  rows={ getRows(data[key]) }
+                  columns={ getColumns(key) }
+                  loading={ loading }
+                  pageSize={ props.page.get('data.limit') || 25 }
+                  rowCount={ data[key].total || 0 }
+                  sortModel={ getSort() }
+                  onPageChange={ (newPage) => setSkip((props.page.get('data.limit') || 25) * newPage) }
+                  paginationMode="server"
+                  onColumnResize={ ({ colDef }) => debounce(() => setColumn(colDef.id, { width : colDef.width })) }
+                  onPageSizeChange={ (newPageSize) => props.setData('limit', newPageSize) }
+                  onSortModelChange={ (model) => onSort(model) }
+                  rowsPerPageOptions={ [25, 50, 75, 100] }
                 />
-              </Grid>
-            ) }
-          </SimpleBar>
+              </Box>
+            );
+          }) }
         </Page.Body>
       ) }
     </Page>

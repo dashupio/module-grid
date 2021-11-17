@@ -1,7 +1,7 @@
 
 // import react
 import React from 'react';
-import { Query, Select } from '@dashup/ui';
+import { Box, Divider, Query, Select } from '@dashup/ui';
 
 // block list
 const BlockGridConfig = (props = {}) => {
@@ -102,23 +102,21 @@ const BlockGridConfig = (props = {}) => {
 
       { !!getModels().filter((f) => f.selected).length && (
         <>
-          <hr />
-            
-          <div className="mb-3">
-            <label className="form-label">
-              Filter By
-            </label>
-            <Query
-              isString
+          <Box my={ 2 }>
+            <Divider />
+          </Box>
 
-              page={ props.page }
-              query={ props.block.filter }
-              dashup={ props.dashup }
-              fields={ props.getFields([props.model]) }
-              onChange={ (val) => props.setBlock(props.block, 'filter', val) }
-              getFieldStruct={ props.getFieldStruct }
-              />
-          </div>
+          <Query
+            isString
+
+            page={ props.page }
+            label="Filter By"
+            query={ props.block.filter }
+            dashup={ props.dashup }
+            fields={ props.getFields([props.model]) }
+            onChange={ (val) => props.setBlock(props.block, 'filter', val) }
+            getFieldStruct={ props.getFieldStruct }
+          />
         </>
       ) }
     </>
