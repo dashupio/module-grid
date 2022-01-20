@@ -1,8 +1,9 @@
 
 // import dependencies
+import shortid from 'shortid';
 import { Box, DataGrid } from '@dashup/ui';
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Icon, Button, Menu, MenuItem, Page, View, CircularProgress, GridActionsCellItem } from '@dashup/ui';
+import React, { useRef, useState, useEffect } from 'react';
+import { Hbs, Icon, Stack, TextField, IconPicker, Dialog, DialogTitle, DialogContentText, DialogContent, DialogActions, Color, Button, IconButton, colors, useTheme, Menu, Modal, MenuItem, Divider, Tooltip, Page, View, ListItemIcon, ListItemText, CircularProgress, GridActionsCellItem, GridColumnMenuContainer, SortGridMenuItems, LoadingButton } from '@dashup/ui';
 
 // scss
 import './grid.scss';
@@ -18,15 +19,25 @@ const debounce = (fn, to = 200) => {
 
 // create gallery page
 const PageGrid = (props = {}) => {
+  // theme
+  const theme = useTheme();
+
   // groups
-  const [open, setOpen] = useState(false);
   const [skip, setSkip] = useState(0);
+  const [icon, setIcon] = useState(false);
   const [form, setForm] = useState(null);
+  const [color, setColor] = useState(false);
   const [share, setShare] = useState(false);
   const [config, setConfig] = useState(false);
   const [loading, setLoading] = useState(false);
   const [updated, setUpdated] = useState(new Date());
   const [selected, setSelected] = useState({ type : 'items', items : [] });
+  const [updating, setUpdating] = useState(null);
+  const [removing, setRemoving] = useState(null);
+  const [colorMenu, setColorMenu] = useState(null);
+  const [columnMenu, setColumnMenu] = useState(null);
+  const [disableSort, setDisableSort] = useState(false);
+  const [removingItem, setRemovingItem] = useState(null);
 
   // data elements
   const [data, setData] = useState({});
@@ -67,6 +78,9 @@ const PageGrid = (props = {}) => {
       icon  : <Icon type="fas" icon="trash" fixedWidth />,
       label : 'Remove',
       color : 'error',
+      onClick : (item) => {
+        setRemovingItem(item);
+      }
     }] : []),
   ];
 
@@ -154,6 +168,9 @@ const PageGrid = (props = {}) => {
       });
     }
 
+    // null
+    if (!props.getQuery()) return null;
+
     // load other groupBy field by unique in db
     const uniqueGroups = await props.getQuery().count(groupBy.name || groupBy.uuid, true);
 
@@ -182,6 +199,12 @@ const PageGrid = (props = {}) => {
       return group ? props.getQuery().where({
         [group.key] : group.value,
       }) : props.getQuery();
+    };
+
+    // check query
+    if (!getQuery()) return {
+      total : 0,
+      items : [],
     };
 
     // get total
@@ -299,19 +322,55 @@ const PageGrid = (props = {}) => {
   // set search
   const setSearch = (search = '') => {
     // set page data
-    props.setUser('search', search.length ? search : null);
+    props.setUser('search', search);
   };
 
   // set columns
-  const setColumns = async (columns) => {
+  const setColumns = async (columns, force = false) => {
+    // force
+    if (force) return props.setData('columns', columns);
+
     // set page data
-    props.setData('columns', columns);
+    debounce(() => props.setData('columns', columns), 200);
   };
 
   // set filter
   const setFilter = async (filter) => {
     // set data
     props.setUser('query', filter, true);
+  };
+
+  // add column
+  const addColumn = (data, force = false) => {
+    // coplumns
+    const columns = props.page.get('data.columns') || [];
+
+    // return
+    if (data.field !== 'custom' && columns.find((c) => c.field === data.field)) {
+      return;
+    }
+
+    // push
+    columns.push({
+      ...data,
+      id : shortid(),
+    });
+    
+    // update columns
+    setColumns(columns, true);
+  };
+
+  // add column
+  const removeColumn = (id, force = false) => {
+    // coplumns
+    const columns = (props.page.get('data.columns') || []).filter((c) => c.id !== id);
+    
+    // update columns
+    setDisableSort(true);
+    setColumns(columns, force);
+
+    // timeout
+    setTimeout(() => setDisableSort(false), 500);
   };
 
   // update column
@@ -324,6 +383,19 @@ const PageGrid = (props = {}) => {
     
     // update columns
     setColumns(props.page.get('data.columns'));
+  };
+
+  // order column
+  const orderColumn = (id, oldIndex, newIndex) => {
+    // find column
+    const column = (props.page.get('data.columns') || []).find((c) => c.id === id);
+    const columns = (props.page.get('data.columns') || []).filter((c) => c.id !== id);
+
+    // splice
+    columns.splice(newIndex - 1, 0, column);
+
+    // set columns
+    setColumns(columns);
   };
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -340,11 +412,14 @@ const PageGrid = (props = {}) => {
 
   // get sort
   const getSort = () => {
+    // disable
+    if (disableSort) return [];
+
     // get field
     const field = props.page.get('data.sort.field') && getField(props.page.get('data.sort.field'));
 
     // field
-    return field && (props.page.get('data.columns') || []).find((c) => c.field === field.uuid) ? [{
+    return (field && (props.page.get('data.columns') || []).find((c) => c.field === field.uuid)) ? [{
       sort  : props.page.get('data.sort.sort') === 1 ? 'asc' : 'desc',
       field : field.name || field.uuid,
     }] : [];
@@ -382,9 +457,10 @@ const PageGrid = (props = {}) => {
         renderEditCell : (opts) => renderEditCell(opts, key, field, col),
   
         id         : col.id,
-        field      : field?.name || field?.uuid || col.field,
+        field      : col.field === 'custom' ? col.id : field?.name || field?.uuid || col.field,
         width      : col.width || (col.basis && fullWidth ? ((fullWidth - 200) * (col.basis / 100)) : null),
-        editable   : true,
+        editable   : col.field !== 'custom',
+        sortable   : col.field !== 'custom' || !!col.sort,
         resizable  : true,
         headerName : col.title,
       };
@@ -394,6 +470,8 @@ const PageGrid = (props = {}) => {
       type       : 'actions',
       field      : 'actions',
       width      : 100,
+      editable   : false,
+      resizable  : false,
       headerName : 'Actions',
       getActions : ({ id }) => {
         // return jsx
@@ -420,6 +498,21 @@ const PageGrid = (props = {}) => {
     // get item
     const item = getItem(key, id);
 
+    // check item
+    if (!item) return null;
+
+    // custom
+    if (col.field === 'custom') {
+      // return data
+      return (
+        <Hbs
+          data={ item ? item.toJSON() : {} }
+          template={ col.view || '' }
+          isInline
+        />
+      );
+    }
+
     // return jsx
     return field && (
       <View
@@ -441,6 +534,9 @@ const PageGrid = (props = {}) => {
   const renderEditCell = ({ id }, key, field, col) => {
     // get item
     const item = getItem(key, id);
+
+    // check item
+    if (!item) return null;
 
     // return jsx
     return (
@@ -471,7 +567,7 @@ const PageGrid = (props = {}) => {
   useEffect(() => {
     // on update
     const onUpdate = () => {
-      setUpdated(new Date());
+      debounce(() => setUpdated(new Date()));
     };
 
     // load groups
@@ -479,81 +575,318 @@ const PageGrid = (props = {}) => {
 
     // add listener
     props.page.on('reload', onUpdate);
+    props.page.on('data.sort', onUpdate);
+    props.page.on('data.group', onUpdate);
+    props.page.on('data.model', onUpdate);
+    props.page.on('data.limit', onUpdate);
+    props.page.on('user.query', onUpdate);
+    props.page.on('data.forms', onUpdate);
+    props.page.on('data.filter', onUpdate);
+    props.page.on('user.search', onUpdate);
+    props.page.on('user.filter.me', onUpdate);
+    props.page.on('user.filter.tags', onUpdate);
 
     // return fn
     return () => {
-      // remove listener
+      // add listener
       props.page.removeListener('reload', onUpdate);
+      props.page.removeListener('data.sort', onUpdate);
+      props.page.removeListener('data.group', onUpdate);
+      props.page.removeListener('data.model', onUpdate);
+      props.page.removeListener('data.limit', onUpdate);
+      props.page.removeListener('user.query', onUpdate);
+      props.page.removeListener('data.forms', onUpdate);
+      props.page.removeListener('data.filter', onUpdate);
+      props.page.removeListener('user.search', onUpdate);
+      props.page.removeListener('user.filter.me', onUpdate);
+      props.page.removeListener('user.filter.tags', onUpdate);
     };
   }, [
     skip,
+    updated,
     props.page.get('_id'),
     props.page.get('type'),
     props.page.get('data.sort'),
     props.page.get('data.group'),
+    props.page.get('data.model'),
     props.page.get('data.limit'),
     props.page.get('user.query'),
+    props.page.get('data.forms'),
     props.page.get('data.filter'),
     props.page.get('user.search'),
     props.page.get('user.filter.me'),
     props.page.get('user.filter.tags'),
   ]);
 
+  // create menu
+  const ColumnMenuComponent = (subProps = {}) => {
+    // props
+    const { hideMenu, currentColumn, ...other } = subProps;
+
+    // nothing
+    if (currentColumn.type === 'actions') return null;
+
+    // return jsx
+    return (
+      <GridColumnMenuContainer
+        hideMenu={ hideMenu }
+        currentColumn={ currentColumn }
+        { ...other }
+      >
+        <SortGridMenuItems onClick={ hideMenu } column={ currentColumn! } />
+
+        <Divider />
+        <MenuItem onClick={ (e) => setUpdating(props.page.get('data.columns').find((c) => c.id === currentColumn.id)) }>
+          <ListItemIcon>
+            <Icon type="fas" icon="pencil" />
+          </ListItemIcon>
+          <ListItemText>
+            Update Column
+          </ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={ (e) => setRemoving(props.page.get('data.columns').find((c) => c.id === currentColumn.id)) } sx={ {
+          color : 'error.main',
+        } }>
+          <ListItemIcon sx={ {
+            color : 'error.main',
+          } }>
+            <Icon type="fas" icon="trash" />
+          </ListItemIcon>
+          <ListItemText>
+            Remove Column
+          </ListItemText>
+        </MenuItem>
+      </GridColumnMenuContainer>
+    );
+  };
+
+  // update jsx
+  const updateJsx = !!updating && (
+    <>
+      <Modal
+        open={ !!updating }
+        title={ updating.title || updating.label }
+        thread={ updating.id }
+        dashup={ props.dashup }
+        onClose={ () => setUpdating(null) }
+      >
+        <Box pt={ 4 } pb={ 2 }>
+          <Stack direction="row" spacing={ 2 }>
+            <Button variant="contained" onClick={ (e) => setColorMenu(e.target) } sx={ {
+              color           : updating.color?.hex && theme.palette.getContrastText(updating.color?.hex),
+              backgroundColor : updating.color?.hex,
+            } }>
+              <Icon icon={ updating.icon || 'pencil' } fixedWidth />
+            </Button>
+            <TextField
+              label="Name"
+              onChange={ (e) => setColumn(updating.id, {
+                title : e.target.value
+              }) }
+              defaultValue={ updating.title }
+              fullWidth
+            />
+          </Stack>
+          { updating.field === 'custom' && (
+            <Box mt={ 2 }>
+              <View
+                type="field"
+                view="input"
+                mode="handlebars"
+                struct="code"
+                field={ {
+                  label : 'Display'
+                } }
+                value={ updating.view }
+                dashup={ props.dashup }
+                onChange={ (e, view) => setColumn(updating.id, { view }) }
+              />
+            </Box>
+          ) }
+        </Box>
+      </Modal>
+      <Menu
+        open={ !!colorMenu }
+        onClose={ () => setColorMenu(null) }
+        anchorEl={ colorMenu }
+      >
+        <MenuItem onClick={ (e) => !setIcon(colorMenu) && setColorMenu(false) }>
+          <ListItemIcon>
+            <Icon icon={ updating.icon || 'pencil' } />
+          </ListItemIcon>
+          <ListItemText>
+            Change Icon
+          </ListItemText>
+        </MenuItem>
+        <MenuItem onClick={ (e) => !setColor(colorMenu) && setColorMenu(false) }>
+          <ListItemIcon>
+            <Icon type="fas" icon="tint" />
+          </ListItemIcon>
+          <ListItemText>
+            Change Color
+          </ListItemText>
+        </MenuItem>
+      </Menu>
+
+      { !!icon && <IconPicker target={ icon } show icon={ updating.icon } onClose={ () => setIcon(false) } onChange={ (icon) => setColumn(updating.id, { icon }) } /> }
+      { !!color && <Color target={ color } show color={ updating.color?.hex } colors={ Object.values(colors) } onClose={ () => setColor(false) } onChange={ (hex) => setColumn(updating.id, { color : hex.hex === 'transparent' ? null : hex }) } /> }
+    </>
+  );
+
+  // remove jsx
+  const removeJsx = !!removing && (
+    <Dialog
+      open={ !!removing }
+      onClose={ () => setRemoving(null) }
+    >
+      <DialogTitle>
+        Confirm Remove
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Are you sure you want to remove this column?
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={ () => setRemoving(null) }>Cancel</Button>
+        <Button color="error" onClick={ (e) => !setRemoving(null) && removeColumn(removing.id) }>
+          Remove
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+
+  // remove jsx
+  const removeItemJsx = !!removingItem && (
+    <Dialog
+      open={ !!removingItem }
+      onClose={ () => setRemovingItem(null) }
+    >
+      <DialogTitle>
+        Confirm Remove
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Are you sure you want to remove this item?
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={ () => setRemovingItem(null) } disabled={ !!loading }>Cancel</Button>
+        <LoadingButton color="error" disabled={ !!loading } loading={ !!loading } onClick={ async (e) => {
+          // removing
+          setLoading(true);
+
+          // remove item
+          await removingItem.remove();
+
+          // loading
+          setLoading(false);
+          setUpdated(new Date());
+          setRemovingItem(null);
+        } }>
+          Remove
+        </LoadingButton>
+      </DialogActions>
+    </Dialog>
+  );
+
   // return jsx
   return (
-    <Page { ...props } require={ required } bodyClass="flex-column">
+    <Page { ...props } require={ required } onConfig={ () => setConfig(true) } onShare={ () => setShare(true) }>
 
       <Page.Share show={ share } onHide={ (e) => setShare(false) } />
       { !!props.item && <Page.Item show item={ props.item } form={ form } setItem={ props.setItem } onHide={ (e) => props.setItem(null) } /> }
       <Page.Config show={ config } onHide={ (e) => setConfig(false) } />
 
-      <Page.Menu onConfig={ () => setConfig(true) } presence={ props.presence } onShare={ () => setShare(true) }>
-        <>
-          { props.dashup.can(props.page, 'submit') && !!props.getForms().length && (
-            props.getForms().length > 1 ? (
-              <>
-                <Button
-                  variant="contained"
-                  onClick={ (e) => setOpen(open ? false : e.target) }
-                >
-                  Create
-                </Button>
-                <Menu
-                  open={ !!open }
-                  onClose={ () => setOpen(false) }
-                  anchorEl={ open }
-                  anchorOrigin={ {
-                    vertical   : 'bottom',
-                    horizontal : 'right',
-                  } }
-                  transformOrigin={ {
-                    vertical   : 'top',
-                    horizontal : 'right',
-                  } }
-                >
-                  { props.getForms().map((form) => {
-                      // return jsx
-                      return (
-                        <MenuItem key={ `create-${form.get('_id')}` } onClick={ (e) => !setForm(form.get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }>
-                          { form.get('name') }
-                        </MenuItem>
-                      );
-                    })
-                  }
-                </Menu>
-              </>
-            ) : (
-              <Button
-                variant="contained"
-                onClick={ (e) => !setForm(props.getForms()[0].get('_id')) && props.setItem(new props.dashup.Model({}, props.dashup)) }
-              >
-                { props.getForms()[0].get('name') }
-              </Button>
-            )
-          ) }
-        </>
+      <Page.Menu presence={ props.presence }>
+        { props.dashup.can(props.page, 'submit') && !!props.getForms().length && (
+          <Button
+            variant="contained"
+            onClick={ (e) => props.setItem(new props.dashup.Model({}, props.dashup)) }
+            startIcon={ (
+              props.getForms()[0] && <Icon icon={ props.getForms()[0].get('icon') } />
+            ) }
+          >
+            { props.getForms()[0].get('name') }
+          </Button>
+        ) }
       </Page.Menu>
-      <Page.Filter onSearch={ setSearch } onSort={ (s) => onSort([s]) } onTag={ setTag } onFilter={ setFilter } isString />
+      <Page.Filter onSearch={ setSearch } onSort={ (s) => onSort([s]) } onTag={ setTag } onFilter={ setFilter } isString>
+        <Tooltip title="Add Column">
+          <IconButton onClick={ (e) => setColumnMenu(e.target) }>
+            <Icon type="fas" icon="columns" />
+          </IconButton>
+        </Tooltip>
+        <Menu
+          open={ !!columnMenu }
+          onClose={ () => setColumnMenu(null) }
+          anchorEl={ columnMenu }
+        >
+          { (props.getFields() || []).map((field, i) => {
+            // get field struct
+            const struct = field.type && props.getFieldStruct(field.type);
+
+            // return jsx
+            return (
+              <MenuItem key={ `column-${field.uuid}` } onClick={ (e) => addColumn({
+                field : field.uuid,
+                title : field.label || field.name,
+              }) }>
+                { (struct && struct.icon) && (
+                  <ListItemIcon>
+                    <Icon type="fas" icon={ struct.icon } />
+                  </ListItemIcon>
+                ) }
+                <ListItemText>
+                  { field.label }
+                </ListItemText>
+              </MenuItem>
+            );
+          }) }
+
+          <Divider />
+
+          <MenuItem onClick={ (e) => addColumn({
+            sort  : 'created_at',
+            view  : '{{date _meta.created_at}}',
+            field : 'custom',
+            title : 'Created At',
+          }) }>
+            <ListItemIcon>
+              <Icon type="fas" icon="calendar-day" />
+            </ListItemIcon>
+            <ListItemText>
+              Created At
+            </ListItemText>
+          </MenuItem>
+          <MenuItem onClick={ (e) => addColumn({
+            sort  : 'updated_at',
+            view  : '{{date _meta.updated_at}}',
+            field : 'custom',
+            title : 'Updated At',
+          }) }>
+            <ListItemIcon>
+              <Icon type="fas" icon="calendar-alt" />
+            </ListItemIcon>
+            <ListItemText>
+              Updated At
+            </ListItemText>
+          </MenuItem>
+          <MenuItem onClick={ (e) => addColumn({
+            view  : '',
+            field : 'custom',
+            title : 'Custom Column',
+          }) }>
+            <ListItemIcon>
+              <Icon type="fas" icon="function" />
+            </ListItemIcon>
+            <ListItemText>
+              Custom
+            </ListItemText>
+          </MenuItem>
+        </Menu>
+      </Page.Filter>
       { !required.find((r) => !props.page.get(r.key)) && (
         <Page.Body>
           { Object.keys(data).map((key) => {
@@ -573,15 +906,23 @@ const PageGrid = (props = {}) => {
                   onPageChange={ (newPage) => setSkip((props.page.get('data.limit') || 25) * newPage) }
                   paginationMode="server"
                   onColumnResize={ ({ colDef }) => debounce(() => setColumn(colDef.id, { width : colDef.width })) }
+                  onColumnOrderChange={ ({ colDef, oldIndex, targetIndex }) => orderColumn(colDef.id, oldIndex, targetIndex) }
                   onPageSizeChange={ (newPageSize) => props.setData('limit', newPageSize) }
                   onSortModelChange={ (model) => onSort(model) }
                   rowsPerPageOptions={ [25, 50, 75, 100] }
+
+                  components={ {
+                    ColumnMenu : ColumnMenuComponent,
+                  } }
                 />
               </Box>
             );
           }) }
         </Page.Body>
       ) }
+      { updateJsx }
+      { removeJsx }
+      { removeItemJsx }
     </Page>
   );
 };

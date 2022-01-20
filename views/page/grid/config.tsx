@@ -68,7 +68,7 @@ const PageGridConfig = (props = {}) => {
     <>
       <TextField
         label="Choose Model"
-        value={ props.page.get('data.model') }
+        value={ props.page.get('data.model') || '' }
         select
         onChange={ (e) => props.setData('model', e.target.value) }
         fullWidth
@@ -84,7 +84,7 @@ const PageGridConfig = (props = {}) => {
       { !!props.page.get('data.model') && (
         <TextField
           label="Choose Form(s)"
-          value={ props.page.get('data.model') }
+          value={ Array.isArray(props.page.get('data.forms')) ? props.page.get('data.forms') : [props.page.get('data.forms')].filter((v) => v) }
           select
           onChange={ (e) => props.setData('forms', e.target.value) }
           fullWidth
@@ -124,7 +124,7 @@ const PageGridConfig = (props = {}) => {
 
           <TextField
             label="Tag Field(s)"
-            value={ props.page.get('data.tag') || [] }
+            value={ Array.isArray(props.page.get('data.tag')) ? props.page.get('data.tag') : [props.page.get('data.tag')].filter((v) => v) }
             select
             onChange={ (e) => props.setData('tag', e.target.value) }
             fullWidth
@@ -142,7 +142,7 @@ const PageGridConfig = (props = {}) => {
 
           <TextField
             label="User Field(s)"
-            value={ props.page.get('data.user') || [] }
+            value={ Array.isArray(props.page.get('data.user')) ? props.page.get('data.user') : [props.page.get('data.user')].filter((v) => v) }
             select
             onChange={ (e) => props.setData('user', e.target.value) }
             fullWidth
