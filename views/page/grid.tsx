@@ -798,95 +798,33 @@ const PageGrid = (props = {}) => {
       <Page.Share show={ share } onHide={ (e) => setShare(false) } />
       { !!props.item && <Page.Item show item={ props.item } form={ form } setItem={ props.setItem } onHide={ (e) => props.setItem(null) } /> }
       <Page.Config show={ config } onHide={ (e) => setConfig(false) } />
-
-      <Page.Menu presence={ props.presence }>
-        { props.dashup.can(props.page, 'submit') && !!props.getForms().length && (
-          <Button
-            variant="contained"
-            onClick={ (e) => props.setItem(new props.dashup.Model({}, props.dashup)) }
-            startIcon={ (
-              props.getForms()[0] && <Icon icon={ props.getForms()[0].get('icon') } />
-            ) }
-          >
-            { props.getForms()[0].get('name') }
-          </Button>
-        ) }
-      </Page.Menu>
+      
       <Page.Filter onSearch={ setSearch } onSort={ (s) => onSort([s]) } onTag={ setTag } onFilter={ setFilter } isString>
         <Tooltip title="Add Column">
           <IconButton onClick={ (e) => setColumnMenu(e.target) }>
             <Icon type="fas" icon="columns" />
           </IconButton>
         </Tooltip>
-        <Menu
-          open={ !!columnMenu }
-          onClose={ () => setColumnMenu(null) }
-          anchorEl={ columnMenu }
-        >
-          { (props.getFields() || []).map((field, i) => {
-            // get field struct
-            const struct = field.type && props.getFieldStruct(field.type);
 
-            // return jsx
-            return (
-              <MenuItem key={ `column-${field.uuid}` } onClick={ (e) => addColumn({
-                field : field.uuid,
-                title : field.label || field.name,
-              }) }>
-                { (struct && struct.icon) && (
-                  <ListItemIcon>
-                    <Icon type="fas" icon={ struct.icon } />
-                  </ListItemIcon>
-                ) }
-                <ListItemText>
-                  { field.label }
-                </ListItemText>
-              </MenuItem>
-            );
-          }) }
-
-          <Divider />
-
-          <MenuItem onClick={ (e) => addColumn({
-            sort  : 'created_at',
-            view  : '{{date _meta.created_at}}',
-            field : 'custom',
-            title : 'Created At',
-          }) }>
-            <ListItemIcon>
-              <Icon type="fas" icon="calendar-day" />
-            </ListItemIcon>
-            <ListItemText>
-              Created At
-            </ListItemText>
-          </MenuItem>
-          <MenuItem onClick={ (e) => addColumn({
-            sort  : 'updated_at',
-            view  : '{{date _meta.updated_at}}',
-            field : 'custom',
-            title : 'Updated At',
-          }) }>
-            <ListItemIcon>
-              <Icon type="fas" icon="calendar-alt" />
-            </ListItemIcon>
-            <ListItemText>
-              Updated At
-            </ListItemText>
-          </MenuItem>
-          <MenuItem onClick={ (e) => addColumn({
-            view  : '',
-            field : 'custom',
-            title : 'Custom Column',
-          }) }>
-            <ListItemIcon>
-              <Icon type="fas" icon="function" />
-            </ListItemIcon>
-            <ListItemText>
-              Custom
-            </ListItemText>
-          </MenuItem>
-        </Menu>
+        { props.dashup.can(props.page, 'submit') && !!props.getForms().length && (
+          <Tooltip title="Add Item">
+            <Button
+              sx={ {
+                ml : 2,
+              } }
+              variant="contained"
+              onClick={ (e) => props.setItem(new props.dashup.Model({}, props.dashup)) }
+              startIcon={ (
+                props.getForms()[0] && <Icon icon={ props.getForms()[0].get('icon') } />
+              ) }
+            >
+              { props.getForms()[0].get('name') }
+            </Button>
+          </Tooltip>
+        ) }
       </Page.Filter>
+
+      { /* ACTUAL GRID */ }
       { !required.find((r) => !props.page.get(r.key)) && (
         <Page.Body>
           { Object.keys(data).map((key) => {
@@ -920,9 +858,80 @@ const PageGrid = (props = {}) => {
           }) }
         </Page.Body>
       ) }
+      { /* / ACTUAL GRID */ }
+
       { updateJsx }
       { removeJsx }
       { removeItemJsx }
+
+      <Menu
+        open={ !!columnMenu }
+        onClose={ () => setColumnMenu(null) }
+        anchorEl={ columnMenu }
+      >
+        { (props.getFields() || []).map((field, i) => {
+          // get field struct
+          const struct = field.type && props.getFieldStruct(field.type);
+
+          // return jsx
+          return (
+            <MenuItem key={ `column-${field.uuid}` } onClick={ (e) => addColumn({
+              field : field.uuid,
+              title : field.label || field.name,
+            }) }>
+              { (struct && struct.icon) && (
+                <ListItemIcon>
+                  <Icon type="fas" icon={ struct.icon } />
+                </ListItemIcon>
+              ) }
+              <ListItemText>
+                { field.label }
+              </ListItemText>
+            </MenuItem>
+          );
+        }) }
+
+        <Divider />
+
+        <MenuItem onClick={ (e) => addColumn({
+          sort  : 'created_at',
+          view  : '{{date _meta.created_at}}',
+          field : 'custom',
+          title : 'Created At',
+        }) }>
+          <ListItemIcon>
+            <Icon type="fas" icon="calendar-day" />
+          </ListItemIcon>
+          <ListItemText>
+            Created At
+          </ListItemText>
+        </MenuItem>
+        <MenuItem onClick={ (e) => addColumn({
+          sort  : 'updated_at',
+          view  : '{{date _meta.updated_at}}',
+          field : 'custom',
+          title : 'Updated At',
+        }) }>
+          <ListItemIcon>
+            <Icon type="fas" icon="calendar-alt" />
+          </ListItemIcon>
+          <ListItemText>
+            Updated At
+          </ListItemText>
+        </MenuItem>
+        <MenuItem onClick={ (e) => addColumn({
+          view  : '',
+          field : 'custom',
+          title : 'Custom Column',
+        }) }>
+          <ListItemIcon>
+            <Icon type="fas" icon="function" />
+          </ListItemIcon>
+          <ListItemText>
+            Custom
+          </ListItemText>
+        </MenuItem>
+      </Menu>
     </Page>
   );
 };

@@ -1,7 +1,7 @@
 
 // import react
 import React from 'react';
-import { Box, Divider, Query, Select } from '@dashup/ui';
+import { Box, Divider, Query, TextField, MenuItem } from '@dashup/ui';
 
 // block list
 const BlockGridConfig = (props = {}) => {
@@ -21,7 +21,7 @@ const BlockGridConfig = (props = {}) => {
         value : form.get('_id'),
         label : form.get('name'),
 
-        selected : (props.model || props.block.model).includes(form.get('_id')),
+        selected : (props.model || props.block.model || []).includes(form.get('_id')),
       };
     });
   };
@@ -46,59 +46,43 @@ const BlockGridConfig = (props = {}) => {
     });
   };
 
-  // on forms
-  const onModel = (value) => {
-    // set data
-    props.setBlock(props.block, 'model', value?.value);
-  };
-
-  // on forms
-  const onForm = (value) => {
-    // set data
-    props.setBlock(props.block, 'form', value?.value);
-  };
-
-  // on background
-  const onBackground = (e) => {
-    // on background
-    props.setBlock(props.block, 'background', e.target.checked);
-  };
-
   // return jsx
   return (
     <>
-      <div className="mb-3">
-        <label className="form-label">
-          Choose Model
-        </label>
-        <Select options={ getModels() } defaultValue={ getModels().filter((f) => f.selected) } onChange={ onModel } />
-        <small>
-          The model this page should display.
-        </small>
-      </div>
+      <TextField
+        label="Choose Model"
+        value={ props.block.model || '' }
+        select
+        onChange={ (e) => props.setBlock(props.block, 'model', e.target.value) }
+        fullWidth
+        helperText="The model this grid will display."
+      >
+        { getModels().map((option) => (
+          <MenuItem key={ option.value } value={ option.value }>
+            { option.label }
+          </MenuItem>
+        ))}
+      </TextField>
 
-      { !!(props.model || props.block.model) && (
-        <div className="mb-3">
-          <label className="form-label">
-            Choose Form
-          </label>
-          <Select options={ getForms() } defaultValue={ getForms().filter((f) => f.selected) } onChange={ onForm } />
-          <small>
-            The forms that this grid will filter by.
-          </small>
-        </div>
+      { !!props.block.model && (
+        <TextField
+          label="Choose Form(s)"
+          value={ Array.isArray(props.block.forms) ? props.block.forms : [props.block.forms].filter((v) => v) }
+          select
+          onChange={ (e) => props.setBlock(props.block, 'forms', e.target.value) }
+          fullWidth
+          helperText="The forms that this grid will filter by."
+          SelectProps={ {
+            multiple : true,
+          } }
+        >
+          { getForms().map((option) => (
+            <MenuItem key={ option.value } value={ option.value }>
+              { option.label }
+            </MenuItem>
+          ))}
+        </TextField>
       ) }
-
-      <hr />
-        
-      <div className="mb-3">
-        <div className="form-check form-switch">
-          <input className="form-check-input" id="is-required" type="checkbox" onChange={ onBackground } checked={ props.block.background } />
-          <label className="form-check-label" htmlFor="is-required">
-            Enable Background
-          </label>
-        </div>
-      </div>
 
       { !!getModels().filter((f) => f.selected).length && (
         <>
